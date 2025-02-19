@@ -158,8 +158,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 }
 
 
-//                sendToClient(clientUUID, new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
-                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
+//                sendToClient(clientUUID, new MyPackage<>(table, EMessageType.TABLE_STATUS));
+                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));//broadcast because of new players' nicks
 
                 return;
             }

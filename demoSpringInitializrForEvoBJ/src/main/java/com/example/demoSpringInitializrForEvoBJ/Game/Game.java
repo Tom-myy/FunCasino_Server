@@ -19,14 +19,14 @@ import java.util.List;
 public class Game {
     private static final Logger logger = LoggerFactory.getLogger(Game.class);
 
-    private static final int TIME_FOR_DECISION = 30;
+    private static final int TIME_FOR_DECISION = 10;
     private static final int TIME_FOR_RESULT_ANNOUNCEMENT = 5000;
     private static final int TIME_BETWEEN_CARDS = 1000;
     private OneUsualDeck deckObject = new OneUsualDeck();
     private List<Card> gameDeck = null;
     private Dealer dealer;
     private Table table;
-    private MyTimer timerForDecision = new MyTimer();
+    private MyTimer timer;
 
 
     PlayersBroadcastCallback playersBroadcastCallback;//It's for sending to certain player his player data
@@ -61,7 +61,7 @@ public class Game {
                 decision.equals(EDecision.STAND)) {
 
             decisionField = decision;
-            timerForDecision.stopTimer();
+            timer.stopTimer();
         } else {
             System.err.println("Server got invalid decision: " + decision);
         }
@@ -76,11 +76,12 @@ public class Game {
         return gameSeats.size();
     }
 
-    public Game(GameToMessageHandlerListener listener, Table table, List<Player> players, PlayersBroadcastCallback callback) {
+    public Game(GameToMessageHandlerListener listener, Table table, List<Player> players, PlayersBroadcastCallback callback, MyTimer timer) {
         this.listener = listener;
         this.table = table;
         this.players = players;
         this.playersBroadcastCallback = callback;
+        this.timer = timer;
     }
 
     public void startGame() {
@@ -88,6 +89,8 @@ public class Game {
             logger.error("Game is already started");
             return;
         } else table.setGame(true);
+
+        timer.stopTimer();
 
 //        listener.broadcast(new MyPackage<>("", EMessageType.GAME_STARTED));
         gameSeats = table.getAndSetGameSeats();
@@ -106,7 +109,7 @@ public class Game {
         }
 
         listener.broadcast(new MyPackage<>(gameSeats, EMessageType.GAME_STARTED/*TABLE_STATUS*/));//mb send after resetGameResultStatus
-        listener.broadcast(new MyPackage<>(TIME_FOR_DECISION, EMessageType.TIME_FOR_DECISION));
+//        listener.broadcast(new MyPackage<>(TIME_FOR_DECISION, EMessageType.TIME_FOR_DECISION));
         table.setDealer(new Dealer());
         dealer = table.getDealer();
         listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO mb not to send the dealer (//mb send after resetGameResultStatus)
@@ -665,7 +668,7 @@ public class Game {
 //        timerForDecision = new MyTimer();//TODO mb initialise not here...
 
         new Thread(()->{
-            timerForDecision.startTimer(TIME_FOR_DECISION);
+            timer.startTimer(TIME_FOR_DECISION, "GAME");
         }).start();
 
         try {//it's necessarily because of thread...
@@ -674,7 +677,7 @@ public class Game {
             throw new RuntimeException(e);
         }
 
-        while (decisionField == null && timerForDecision.isRunning()) {
+        while (decisionField == null && timer.isRunning()) {
             System.out.println("Decision button is empty, but timer is running yet");
             try {
                 Thread.sleep(1000);
@@ -682,7 +685,7 @@ public class Game {
                 throw new RuntimeException(e);
             }
         }
-        System.out.println("AFTER empty while (waiting for a decision)");
+//        System.out.println("AFTER empty while (waiting for a decision)");
 
         if(decisionField != null /*&& timerForDecision.isRunning()*/) {
             System.out.println("Decision was made on time");
@@ -690,8 +693,9 @@ public class Game {
         }
 
         if(decisionField == null /*&& !timerForDecision.isRunning()*/) {
-            logger.error("decisionField == null and timer is over - basicDecision!!!");
-            return basicDecision(seat);
+            EDecision decision = basicDecision(seat);
+            logger.error("decisionField == null and timer is over -> basicDecision - " + decision);
+            return decision;
         }
 
         return null;

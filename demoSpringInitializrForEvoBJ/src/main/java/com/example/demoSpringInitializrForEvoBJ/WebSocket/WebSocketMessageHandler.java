@@ -1,10 +1,7 @@
 package com.example.demoSpringInitializrForEvoBJ.WebSocket;
 
 import com.example.demoSpringInitializrForEvoBJ.DTO.EvoUserDTO;
-import com.example.demoSpringInitializrForEvoBJ.Game.EDecision;
-import com.example.demoSpringInitializrForEvoBJ.Game.EGamePhaseForInterface;
-import com.example.demoSpringInitializrForEvoBJ.Game.Game;
-import com.example.demoSpringInitializrForEvoBJ.Game.MyTimer;
+import com.example.demoSpringInitializrForEvoBJ.Game.*;
 import com.example.demoSpringInitializrForEvoBJ.Game.Table.Seat;
 import com.example.demoSpringInitializrForEvoBJ.Game.Table.Table;
 import com.example.demoSpringInitializrForEvoBJ.GameToMessageHandlerListener;
@@ -28,11 +25,11 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.*;
 
 @Component
-public class WebSocketMessageHandler extends TextWebSocketHandler implements GameToMessageHandlerListener {
+public class WebSocketMessageHandler extends TextWebSocketHandler implements GameToMessageHandlerListener, TimerObserver {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketMessageHandler.class);
 
-    private static final int TIME_BEFORE_GAME = 30;//seconds
+    private static final int TIME_BEFORE_GAME = 15;//seconds
 
     private List<Player> players = new LinkedList<>();//for money management
     private boolean isPlayersChangingCompleted = false;
@@ -40,14 +37,14 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Table table = new Table(players, this::playersBroadcast);
     private final MessageProcessor messageProcessor;
-    private final Game game = new Game(this, table, players, this::playersBroadcast);
+    private MyTimer timerForGameStart = new MyTimer(/*TIME_BEFORE_GAME,*/ this);
+    private final Game game = new Game(this, table, players, this::playersBroadcast, timerForGameStart);
     private ClientFinder clientFinder;
     // Коллекция для хранения подключённых клиентов
     //    private final Set<WebSocketSession> clients = Collections.synchronizedSet(new HashSet<>());
     private final Map<String, WebSocketSession> clients = Collections.synchronizedMap(new HashMap<>());
 //    private final Map<String, WebSocketSession> clientsForSending = new HashMap<>();
 
-    private MyTimer timerForGameStart = new MyTimer();
 
     public WebSocketMessageHandler(EvoUserRepository evoUserRepository) {
         this.evoUserRepository = evoUserRepository;
@@ -158,8 +155,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 }
 
 
-//                sendToClient(clientUUID, new MyPackage<>(table, EMessageType.TABLE_STATUS));
-                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));//broadcast because of new players' nicks
+//                sendToClient(clientUUID, new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
+                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
 
                 return;
             }
@@ -317,10 +314,9 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     {//before-timerForGameStart
                         if (!timerForGameStart.isRunning()) {
                             if (table.isThereGameSeat()) {
-                                broadcast(new MyPackage<>(TIME_BEFORE_GAME, EMessageType.TIME_BEFORE_GAME));
+//                                broadcast(new MyPackage<>(TIME_BEFORE_GAME, EMessageType.TIME_BEFORE_GAME));
                                 new Thread(() -> {
-                                    broadcast(new MyPackage<>("", EMessageType.START_TIMER_BEFORE_GAME));
-                                    timerForGameStart.startTimer(TIME_BEFORE_GAME);
+                                    timerForGameStart.startTimer(TIME_BEFORE_GAME, "BEFORE_GAME");
                                 }).start();
 
                                 try {
@@ -332,8 +328,10 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                                 new Thread(() -> {
                                     while (timerForGameStart.isRunning()) {
                                     }
+
                                     if (table.isThereGameSeat()) {
                                         new Thread(() -> {
+//                                            timerForGameStart.stopTimer();
                                             game.startGame();
                                         }).start();
                                     }
@@ -419,6 +417,32 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 //        sendToClient(client, responsePackage);
     }
 
+/*    public List<Player> getPlayersInGame() {
+        List<Player> gamePlayers = new ArrayList<>();
+
+        for (Player p : players) {
+            if (p.isWantsToStartGame()) {
+                gamePlayers.add(p);
+            }
+        }
+
+        System.out.println(gamePlayers.size());
+        return gamePlayers;
+    }*/
+
+    public List<Player> getPlayersInGame() {
+        List<Player> gamePlayers = new ArrayList<>();
+
+        for (Player p : players) {
+            if (p.isInTheGame()) {
+                gamePlayers.add(p);
+            }
+        }
+
+        System.out.println(gamePlayers.size());
+        return gamePlayers;
+    }
+
     public void playersBroadcast() {//It's for sending to certain player his player data
         for (Player player : players) {
             sendToClient(player.getPlayerUUID(), new MyPackage<>(player, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
@@ -472,7 +496,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
     public void removingInactiveClient(WebSocketSession client) {
         if (clients.containsValue(client)) {
-            while(table.isGame()) {
+            while (table.isGame()) {
 
             }
 
@@ -551,5 +575,29 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     @Override
     public void onMessage(MyPackage<?> myPackage) {
 
+    }
+
+    @Override
+    public void timeWasChanged(int seconds, String flag) {
+/*        System.out.println("in timeWasChanged");
+        for (Player p : getPlayersInGame()) {
+            System.out.println("before time sending");
+            sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER));
+            System.out.println("time must be sent");
+        }*/
+        if (flag.equalsIgnoreCase("BEFORE_GAME")) {
+            if (seconds == -1)
+                broadcast(new MyPackage<>("", EMessageType.TIMER_CANCEL));//TODO mustn't broadcast - players at the table\in the game
+            else
+                broadcast(new MyPackage<>(seconds, EMessageType.TIMER));//TODO mustn't broadcast - players at the table\in the game
+        } else if (flag.equalsIgnoreCase("GAME")) {
+            for (Player p : getPlayersInGame()) {
+                if (seconds == -1)
+                    sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER_CANCEL));
+                else
+                    sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER));
+
+            }
+        }
     }
 }

@@ -564,6 +564,7 @@ public class Game {
             for (Seat s : p.getSeats()) {
                 s.fullSeatReset();
             }
+            p.setWantsToStartGame(false);
         }
 
         playersBroadcastCallback.playersBroadcast();//need because of s.fullSeatReset() for every player

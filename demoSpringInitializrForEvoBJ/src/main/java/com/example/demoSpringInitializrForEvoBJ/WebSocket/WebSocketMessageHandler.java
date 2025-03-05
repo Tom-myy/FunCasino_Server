@@ -1,5 +1,6 @@
 package com.example.demoSpringInitializrForEvoBJ.WebSocket;
 
+import com.example.demoSpringInitializrForEvoBJ.Client;
 import com.example.demoSpringInitializrForEvoBJ.DTO.EvoUserDTO;
 import com.example.demoSpringInitializrForEvoBJ.Game.*;
 import com.example.demoSpringInitializrForEvoBJ.Game.Table.Seat;
@@ -42,8 +43,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     private ClientFinder clientFinder;
     // Коллекция для хранения подключённых клиентов
     //    private final Set<WebSocketSession> clients = Collections.synchronizedSet(new HashSet<>());
-    private final Map<String, WebSocketSession> clients = Collections.synchronizedMap(new HashMap<>());
-    private final Map<String, WebSocketSession> notReadyClients = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Client> notReadyClients = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, Client> clients = Collections.synchronizedMap(new HashMap<>());
 //    private final Map<String, WebSocketSession> clientsForSending = new HashMap<>();
 
 
@@ -63,7 +64,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     }
 
     @Override
-    public void handleTextMessage(WebSocketSession client, TextMessage message) {
+    public void handleTextMessage(WebSocketSession session, TextMessage message) {
         // Десериализация JSON в MyPackage
         String payload = message.getPayload();
         MyPackage<?> myPackage;
@@ -75,11 +76,30 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             return;
         }
 
+/*        String tmpClientUUID = clientFinder.findNotReadyUUIDBySession(session);
+        if(tmpClientUUID == null) {
+            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
+            return;
+        }
+
+        Client tmpClient = clientFinder.findReadyClientByUUID(tmpClientUUID);
+        if(tmpClient == null) {
+            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
+            return;
+        }
+
+        if (clients.containsValue(tmpClient)) {
+//            String clientUUID = clientFinder.findReadyUUIDBySession(client);
+            logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + tmpClientUUID + ")");
+        } else
+            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + tmpClient.getSession().getId() + " - session ID (not UUID))");*/
+
+//        if (clients.containsValue(client)) {
         if (clients.containsValue(client)) {
-            String clientUUID = clientFinder.findReadyUUIDByClient(client);
+            String clientUUID = clientFinder.findReadyUUIDBySession(session);
             logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + clientUUID + ")");
         } else
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + client.getId() + " - session ID (not UUID))");
+            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + session.getId() + " - session ID (not UUID))");
 
 /*        String playerUUID = clientFinder.findUUIDByClient(client); //TODO this one
         if(playerUUID == null) {
@@ -99,10 +119,12 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
         switch (myPackage.getMessageType()) {
             case EMessageType.AUTHORIZATION: {
+                Client client = new Client(session);
+
                 MyPackage<?> responsePackage = messageProcessor.handleAuthorization(myPackage);
 
                 if (responsePackage.getMessageType().equals(EMessageType.AUTHORIZATION_ERROR)) {
-                    logger.info("Client (" + client.getId() + " - session ID (not UUID)) failed authorization: Invalid credentials");
+                    logger.info("Client (" + client.getSession().getId() + " - session ID (not UUID)) failed authorization: Invalid credentials");
                     sendToClient(client, responsePackage);
                     return;
                 }
@@ -138,16 +160,26 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 players.add(player);
                 table.addPlayerNickName(player);
 
+                Client client = clientFinder.findNotReadyClientByUUID(player.getPlayerUUID());
+                if(client == null) {
+                    logger.error("Smth went wrong in PLAYER");
+                    return;
+                }
+                client.setPlayer(player);
+
                 break;
             }
 
             case EMessageType.MAIN_FORM_INITIALIZATION: {
-                String clientUUID = clientFinder.findNotReadyUUIDByClient(client);
+                String clientUUID = clientFinder.findNotReadyUUIDBySession(session);
                 if(clientUUID == null) {
-                    logger.error("Client (" + client.getId() + " - session ID (not UUID)) failed to initialize");
+                    logger.error("Client (" + session.getId() + " - session ID (not UUID)) failed to initialize");
                     return;
                 }
 
+//                Client client = notReadyClients.get(clientUUID);
+                Client client = clientFinder.findNotReadyClientByUUID(clientUUID);
+                client.setConnectionStatusToConnect();
                 clients.put(clientUUID, client);
 
                 broadcast(new MyPackage<>(clients.size(), EMessageType.CLIENT_COUNT));
@@ -371,7 +403,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
             case EMessageType.REQUEST_TO_START_GAME: {
                 if (table.isThereGameSeat()) {
-                    String clientUUID = clientFinder.findReadyUUIDByClient(client);
+                    String clientUUID = clientFinder.findReadyUUIDBySession(session);
 
                     if (clientUUID == null) {
                         logger.error("clientUUID == null for REQUEST_TO_START_GAME");
@@ -516,9 +548,9 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
             }
 
-            String clientUUID = clientFinder.findReadyUUIDByClient(client);
+            String clientUUID = clientFinder.findReadyUUIDBySession(client);
 
-            clients.remove(clientFinder.findReadyUUIDByClient(client));
+            clients.remove(clientFinder.findReadyUUIDBySession(client));
             //сделать некий метод, который после отключения клиента будет проверять списки клиентов,
             //игроков и мест, и будет удалять отключившигося клиента оттуда
 
@@ -539,10 +571,10 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
         }
 
         synchronized (clients) {
-            for (WebSocketSession client : clients.values()) {
+            for (Client client : clients.values()) {
                 try {
-                    client.sendMessage(new TextMessage(responseJson));
-                    logger.info("Broadcast to (" + clientFinder.findReadyUUIDByClient(client) + "): msg_json - " + responseJson);
+                    client.getSession().sendMessage(new TextMessage(responseJson));
+                    logger.info("Broadcast to (" + clientFinder.findReadyUUIDBySession(client.getSession()) + "): msg_json - " + responseJson);
                 } catch (Exception e) {
                     logger.error("Error while broadcasting: " + responseJson, e);
 //                    return;
@@ -561,17 +593,24 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             throw new RuntimeException(e);
         }
 
-        WebSocketSession client = clients.get(playerUUID);
+        Client client = clientFinder.findReadyClientByUUID(playerUUID);
+
+        if(client == null) {
+            logger.error("Client not found for UUID: " + playerUUID);
+            return;
+        }
+
+//        WebSocketSession session = clients.get(playerUUID);
 
         try {
-            client.sendMessage(new TextMessage(responseJson));
+            client.getSession().sendMessage(new TextMessage(responseJson));
             logger.info("SendToClient (" + playerUUID + "): msg_json - " + responseJson);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendToClient(WebSocketSession client, MyPackage<?> message) {
+    public void sendToClient(Client client, MyPackage<?> message) {
         String responseJson;
         try {
             responseJson = objectMapper.writeValueAsString(message);
@@ -580,9 +619,9 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
         }
 
         try {
-            client.sendMessage(new TextMessage(responseJson));
+            client.getSession().sendMessage(new TextMessage(responseJson));
 //            logger.info("SendToClient (" + clientFinder.findUUIDByClient(client) + "):\n msg_json - " + responseJson);
-            logger.info("SendToClient (" + client.getId() + " - session ID (not UUID)): msg_json - " + responseJson);
+            logger.info("SendToClient (" + client.getSession().getId() + " - session ID (not UUID)): msg_json - " + responseJson);
         } catch (Exception e) {
             e.printStackTrace();
         }

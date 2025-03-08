@@ -17,7 +17,7 @@ public class MessageProcessor {
         this.evoUserRepository = evoUserRepository;
     }
 
-    public MyPackage handleAuthorization(MyPackage<?> myPackage) {
+    public MyPackage handleAuthorization(MyPackage<?> myPackage, String clientUUID) {
 
         LoginRequestDTO loginRequest = objectMapper.convertValue(myPackage.getMessage(), LoginRequestDTO.class);
 
@@ -32,7 +32,8 @@ public class MessageProcessor {
 
             // Создание ответа
             EvoUserDTO responseUser = new EvoUserDTO(
-                    randomUUID().toString(),
+//                    randomUUID().toString(),
+                    clientUUID,
                     user.getName(),
                     user.getSurname(),
                     user.getNickName(),

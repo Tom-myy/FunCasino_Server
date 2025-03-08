@@ -42,7 +42,7 @@ public class Table {
 
     @JsonIgnore
     public void addPlayerNickName(Player player) {
-        if(playerNickNames.containsKey(player.getPlayerUUID())) {
+        if (playerNickNames.containsKey(player.getPlayerUUID())) {
             logger.error("PlayerUUID already exists in playerNickNames!");
             return;
         }
@@ -52,7 +52,7 @@ public class Table {
 
     @JsonIgnore
     public void removePlayerNickName(Player player) {
-        if(!playerNickNames.containsKey(player.getPlayerUUID())) {
+        if (!playerNickNames.containsKey(player.getPlayerUUID())) {
             logger.error("PlayerUUID doesn't exist in playerNickNames!");
             return;
         }
@@ -74,7 +74,6 @@ public class Table {
         }
         return false;
     }
-
 
 
     @JsonIgnore
@@ -152,7 +151,23 @@ public class Table {
         return false;
     }
 
+    @JsonIgnore
+    public void removePlayersSeatsAtTheTable(Player player) {
+        for (int i = 0; i < player.getSeats().size(); i++) {
+            int index = -1;
 
+            for (Seat seat : seats) {
+                if (seat.getPlayerUUID().equals(player.getPlayerUUID())) {
+                    index = seats.indexOf(seat);
+                    break;
+                }
+            }
+
+            if (index != -1) {
+                seats.remove(index);
+            } else System.err.println("There is no such seats");
+        }
+    }
 /*    public Seat getSeatByKey(int key) {
         if (key >= 0 && key <= 6)
             return seats.get(key);

@@ -6,15 +6,15 @@ import org.springframework.web.socket.WebSocketSession;
 import java.util.Map;
 
 public class ClientFinder {
-    private Map<String, Client> notReadyClients;
+//    private Map<String, Client> notReadyClients;
     private Map<String, Client> clients;
 
-    public ClientFinder(Map<String, Client> notReadyClients, Map<String, Client> clients) {
-        this.notReadyClients = notReadyClients;
+    public ClientFinder(/*Map<String, Client> notReadyClients, */Map<String, Client> clients) {
+//        this.notReadyClients = notReadyClients;
         this.clients = clients;
     }
 
-    public String findReadyUUIDBySession(WebSocketSession session) {
+    public String findUUIDBySession(WebSocketSession session) {
         for (Map.Entry<String, Client> entry: clients.entrySet()){
             if (entry.getValue().getSession().equals(session)){
                 return entry.getKey();
@@ -23,22 +23,31 @@ public class ClientFinder {
         return null;
     }
 
-    public Client findReadyClientByUUID(String clientUUID) {
+    public Client findClientByUUID(String clientUUID) {
         return clients.get(clientUUID);
     }
 
-    public String findNotReadyUUIDBySession(WebSocketSession session) {
-        for (Map.Entry<String, Client> entry: notReadyClients.entrySet()){
+    public Client findClientBySession(WebSocketSession session) {
+        for (Map.Entry<String, Client> entry: clients.entrySet()){
             if (entry.getValue().getSession().equals(session)){
-                return entry.getKey();
+                return entry.getValue();
             }
         }
         return null;
     }
 
-    public Client findNotReadyClientByUUID(String clientUUID) {
-        return notReadyClients.get(clientUUID);//TODO mb i need get this client, return him and delete from collection?
-    }
+//    public String findNotReadyUUIDBySession(WebSocketSession session) {
+//        for (Map.Entry<String, Client> entry: notReadyClients.entrySet()){
+//            if (entry.getValue().getSession().equals(session)){
+//                return entry.getKey();
+//            }
+//        }
+//        return null;
+//    }
+//
+//    public Client findNotReadyClientByUUID(String clientUUID) {
+//        return notReadyClients.get(clientUUID);//TODO mb i need get this client, return him and delete from collection?
+//    }
 
 
 }

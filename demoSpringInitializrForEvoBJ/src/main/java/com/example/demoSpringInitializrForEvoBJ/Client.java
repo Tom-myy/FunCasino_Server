@@ -9,6 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class Client {
     @Getter
     private WebSocketSession session = null;
+    @Getter
     private ConnectionStatus connectionStatus = null;
     @Getter
     @Setter
@@ -21,5 +22,9 @@ public class Client {
 
     public void setConnectionStatusToConnect() {
         connectionStatus = ConnectionStatus.CONNECTED;
+    }
+
+    public void setConnectionStatusToDisconnect() {
+        connectionStatus = ConnectionStatus.DISCONNECTED;
     }
 }

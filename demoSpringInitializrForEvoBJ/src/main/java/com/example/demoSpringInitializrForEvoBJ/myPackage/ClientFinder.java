@@ -1,17 +1,21 @@
 package com.example.demoSpringInitializrForEvoBJ.myPackage;
 
 import com.example.demoSpringInitializrForEvoBJ.Client;
+import com.example.demoSpringInitializrForEvoBJ.Player;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.List;
 import java.util.Map;
 
 public class ClientFinder {
 //    private Map<String, Client> notReadyClients;
     private Map<String, Client> clients;
+    private List<Player> players;
 
-    public ClientFinder(/*Map<String, Client> notReadyClients, */Map<String, Client> clients) {
+    public ClientFinder(/*Map<String, Client> notReadyClients, */Map<String, Client> clients, List<Player> players) {
 //        this.notReadyClients = notReadyClients;
         this.clients = clients;
+        this.players = players;
     }
 
     public String findUUIDBySession(WebSocketSession session) {
@@ -25,6 +29,15 @@ public class ClientFinder {
 
     public Client findClientByUUID(String clientUUID) {
         return clients.get(clientUUID);
+    }
+
+    public Player findPlayerByUUID(String clientUUID) {
+        for(Player p: players){
+            if(p.getPlayerUUID().equals(clientUUID)){
+                return p;
+            }
+        }
+        return null;
     }
 
     public Client findClientBySession(WebSocketSession session) {

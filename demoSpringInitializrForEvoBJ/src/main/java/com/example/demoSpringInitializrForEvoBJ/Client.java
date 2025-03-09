@@ -13,7 +13,12 @@ public class Client {
     private ConnectionStatus connectionStatus = null;
     @Getter
     @Setter
-    private Player player = null;
+//    private Player player = null;
+    private String playerUUID = null;
+
+    @Getter
+    @Setter
+    private boolean isReadyToGetMessages = false;
 
     public Client(WebSocketSession session) {
         this.session = session;

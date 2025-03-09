@@ -86,7 +86,6 @@ public class Game {
 
     public void startGame() {
         if (table.isGame()) {
-            logger.error("Game is already started");
             return;
         } else table.setGame(true);
 
@@ -115,7 +114,7 @@ public class Game {
         listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO mb not to send the dealer (//mb send after resetGameResultStatus)
 //        String nextGame;
 
-        if(gameDeck == null) {
+        if (gameDeck == null) {
             gameDeck = new ArrayList<>(deckObject.getOneUsualDeck());//TODO mb change smth here
             Collections.shuffle(gameDeck);
         }
@@ -206,7 +205,7 @@ public class Game {
                     throw new RuntimeException(e);
                 }
 
-                if(firstDecision == null) {
+                if (firstDecision == null) {
                     logger.error("Smth went wrong and decision is null");
                     new RuntimeException("Smth went wrong and decision is null");
                     return;
@@ -668,7 +667,7 @@ public class Game {
 
 //        timerForDecision = new MyTimer();//TODO mb initialise not here...
 
-        new Thread(()->{
+        new Thread(() -> {
             timer.startTimer(TIME_FOR_DECISION, "GAME");
         }).start();
 
@@ -688,14 +687,14 @@ public class Game {
         }
 //        System.out.println("AFTER empty while (waiting for a decision)");
 
-        if(decisionField != null /*&& timerForDecision.isRunning()*/) {
+        if (decisionField != null /*&& timerForDecision.isRunning()*/) {
             System.out.println("Decision was made on time");
             return getDecisionField();
         }
 
-        if(decisionField == null /*&& !timerForDecision.isRunning()*/) {
+        if (decisionField == null /*&& !timerForDecision.isRunning()*/) {
             EDecision decision = basicDecision(seat);
-            logger.error("decisionField == null and timer is over -> basicDecision - " + decision);
+            logger.info("decisionField == null and timer is over -> basicDecision - " + decision);
             return decision;
         }
 
@@ -711,7 +710,6 @@ public class Game {
 //            seat.setCurrentDecision(EDecision.HIT);
         }
     }
-
 
 
     public boolean isAbleToSplit(Seat seat) {//idk

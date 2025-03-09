@@ -32,7 +32,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketMessageHandler.class);
 
-    private static final int TIME_BEFORE_GAME = 15;//seconds
+    private static final int TIME_BEFORE_GAME = 15000;//seconds
 
     private List<Player> players = new LinkedList<>();//for money management
     public Player getPlayerByPlayerUUID(String playerUUID) {//TODO move it some better place and think over it better
@@ -395,8 +395,10 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 {//changing bet for seat in Table
                     int ind_UPDATE_SEAT_BET = -1;
                     for (Seat seat : table.getSeats()) {
-                        if (seat.equalsExcludingCurrentBet(seatForBetUpdating))
+                        if (seat.equalsExcludingCurrentBet(seatForBetUpdating)) {
                             ind_UPDATE_SEAT_BET = table.getSeats().indexOf(seat);
+                            break;
+                        }
                     }
 
                     if (ind_UPDATE_SEAT_BET == -1) {
@@ -407,33 +409,39 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     table.getSeats().set(ind_UPDATE_SEAT_BET, seatForBetUpdating);
                 }
 
+                int seatIndexInPlayer = -1;
                 {//changing bet for seat in Player
-                    Player newPlayerForBet = null;
-                    int tmpInd = -1;
+                    Player playerForBet = null;
                     for (Player p : players) {
                         if (p.getPlayerUUID().equals(seatForBetUpdating.getPlayerUUID())) {
-                            newPlayerForBet = p;
+                            playerForBet = p;
                             for (Seat s : p.getSeats()) {
                                 if (s.equalsBySeatNumberAndUUID(seatForBetUpdating)) {
-                                    tmpInd = p.getSeats().indexOf(s);
+                                    seatIndexInPlayer = p.getSeats().indexOf(s);
+                                    break;
                                 }
                             }
+                            break;
                         }
                     }
 
-                    if (tmpInd == -1) {
+                    if (seatIndexInPlayer == -1) {
                         logger.error("tmpInd == -1, no one player doesn't have such seat for bet updating");
                         return;
                     }
-                    if (newPlayerForBet == null) {
+                    if (playerForBet == null) {
                         logger.error("newPlayerForBet is empty");
                         return;
                     }
 
-                    newPlayerForBet.getSeats().set(tmpInd, seatForBetUpdating);
-                    newPlayerForBet.changeBalance(-seatForBetUpdating.getCurrentBet());
+                    Seat oldSeat = playerForBet.getSeats().get(seatIndexInPlayer);
+                    int oldBet = oldSeat.getCurrentBet();
 
-                    sendToClient(seatForBetUpdating.getPlayerUUID(), new MyPackage<>(newPlayerForBet, EMessageType.CURRENT_DATA_ABOUT_PLAYER));//TODO here was added ---
+                    playerForBet.getSeats().set(seatIndexInPlayer, seatForBetUpdating);
+                    playerForBet.changeBalance(-(seatForBetUpdating.getCurrentBet() - oldBet));//TODO change
+
+
+                    sendToClient(seatForBetUpdating.getPlayerUUID(), new MyPackage<>(playerForBet, EMessageType.CURRENT_DATA_ABOUT_PLAYER));//TODO here was added ---
 
                     {//before-timerForGameStart
                         if (!timerForGameStart.isRunning()) {
@@ -461,7 +469,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                                     }
                                 }).start();
                             }
-                        }
+                        } /*else timerForGameStart.stopTimer();*///TODO doesnt work as i thought...
                     }
                 }
 

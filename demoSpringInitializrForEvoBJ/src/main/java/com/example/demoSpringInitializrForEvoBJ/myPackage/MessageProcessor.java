@@ -61,23 +61,24 @@ package com.example.demoSpringInitializrForEvoBJ.myPackage;
 import com.example.demoSpringInitializrForEvoBJ.DTO.EvoUserDTO;
 import com.example.demoSpringInitializrForEvoBJ.DTO.LoginRequestDTO;
 import com.example.demoSpringInitializrForEvoBJ.entity.EvoUser;
-import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
+//import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
+import com.example.demoSpringInitializrForEvoBJ.service.EvoUserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 
 public class MessageProcessor {
-    private final EvoUserRepository evoUserRepository;
+    private final EvoUserService evoUserService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public MessageProcessor(EvoUserRepository evoUserRepository) {
-        this.evoUserRepository = evoUserRepository;
+    public MessageProcessor(EvoUserService evoUserService) {
+        this.evoUserService = evoUserService;
     }
 
     public MyPackage<?> handleAuthorization(MyPackage<?> myPackage/*, String clientUUID*/) {
         LoginRequestDTO loginRequest = objectMapper.convertValue(myPackage.getMessage(), LoginRequestDTO.class);
 
         // Взаимодействие с БД: ищем пользователя по логину и паролю
-        Optional<EvoUser> optionalUser = evoUserRepository.findByLoginAndPass(
+        Optional<EvoUser> optionalUser = evoUserService.findByLoginAndPass(
                 loginRequest.getNickname(),
                 loginRequest.getPassword()
         );
@@ -87,7 +88,7 @@ public class MessageProcessor {
 
             // Создание ответа с использованием UUID из БД
             EvoUserDTO responseUser = new EvoUserDTO(
-                    user.getUserID().toString(), // Используем UUID из БД
+                    user.getUserID(), // Используем UUID из БД
                     user.getName(),
                     user.getSurname(),
                     user.getNickName(),

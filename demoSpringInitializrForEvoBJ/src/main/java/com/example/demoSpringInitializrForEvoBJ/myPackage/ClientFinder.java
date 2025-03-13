@@ -6,20 +6,25 @@ import org.springframework.web.socket.WebSocketSession;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientFinder {
 //    private Map<String, Client> notReadyClients;
-    private Map<String, Client> clients;
+
+    private Map<String, Client> temporaryClients = new ConcurrentHashMap<>();
+    private Map<UUID, Client> authenticatedClients = new ConcurrentHashMap<>();
     private List<Player> players;
 
-    public ClientFinder(/*Map<String, Client> notReadyClients, */Map<String, Client> clients, List<Player> players) {
+    public ClientFinder(/*Map<String, Client> notReadyClients, */Map<String, Client> temporaryClients, Map<UUID, Client> authenticatedClients, List<Player> players) {
 //        this.notReadyClients = notReadyClients;
-        this.clients = clients;
+        this.temporaryClients = temporaryClients;
+        this.authenticatedClients = authenticatedClients;
         this.players = players;
     }
 
-    public String findUUIDBySession(WebSocketSession session) {
-        for (Map.Entry<String, Client> entry: clients.entrySet()){
+    public UUID findAuthUUIDBySession(WebSocketSession session) {
+        for (Map.Entry<UUID, Client> entry: authenticatedClients.entrySet()){
             if (entry.getValue().getSession().equals(session)){
                 return entry.getKey();
             }
@@ -27,11 +32,24 @@ public class ClientFinder {
         return null;
     }
 
-    public Client findClientByUUID(String clientUUID) {
-        return clients.get(clientUUID);
+    public String findTempUUIDBySession(WebSocketSession session) {
+        for (Map.Entry<String, Client> entry: temporaryClients.entrySet()){
+            if (entry.getValue().getSession().equals(session)){
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 
-    public Player findPlayerByUUID(String clientUUID) {
+    public Client findAuthClientByUUID(UUID clientUUID) {
+        return authenticatedClients.get(clientUUID);
+    }
+
+    public Client findTempClientByUUID(String clientUUID) {
+        return temporaryClients.get(clientUUID);
+    }
+
+    public Player findPlayerByUUID(UUID clientUUID) {
         for(Player p: players){
             if(p.getPlayerUUID().equals(clientUUID)){
                 return p;
@@ -40,8 +58,17 @@ public class ClientFinder {
         return null;
     }
 
-    public Client findClientBySession(WebSocketSession session) {
-        for (Map.Entry<String, Client> entry: clients.entrySet()){
+    public Client findAuthClientBySession(WebSocketSession session) {
+        for (Map.Entry<UUID, Client> entry: authenticatedClients.entrySet()){
+            if (entry.getValue().getSession().equals(session)){
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public Client findTempClientBySession(WebSocketSession session) {
+        for (Map.Entry<String, Client> entry: temporaryClients.entrySet()){
             if (entry.getValue().getSession().equals(session)){
                 return entry.getValue();
             }

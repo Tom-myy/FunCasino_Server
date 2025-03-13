@@ -1,3 +1,4 @@
+/*
 package com.example.demoSpringInitializrForEvoBJ.controller;
 
 import com.example.demoSpringInitializrForEvoBJ.entity.EvoUser;
@@ -11,6 +12,7 @@ import java.util.List;
 @RequestMapping("/players")
 public class EvoUserController {
 
+*/
 /*    @Autowired
     private EvoUserService evoUserService;
 
@@ -24,7 +26,8 @@ public class EvoUserController {
     @PostMapping
     public EvoUser addPlayer(@RequestBody EvoUser evoUser) {
         return evoUserService.addEvoUser(evoUser.getName(), evoUser.getBalance());
-    }*/
+    }*//*
+
 
     private final EvoUserRepository evoUserRepository;
 
@@ -37,3 +40,4 @@ public class EvoUserController {
         return evoUserRepository.findAll();
     }
 }
+*/

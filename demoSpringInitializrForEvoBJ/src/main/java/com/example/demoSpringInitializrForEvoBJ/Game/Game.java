@@ -83,9 +83,9 @@ public class Game {
         this.timer = timer;
     }
 
-    public void startGame() {
+    public List<Player> startGame() {
         if (table.isGame()) {
-            return;
+            return null;
         } else table.setGame(true);
 
         timer.stopTimer();
@@ -103,6 +103,7 @@ public class Game {
                     listener.sendToClient(p.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
                     break;
                 }
+//                p.resetBalanceDifference();
             }
         }
 
@@ -207,7 +208,7 @@ public class Game {
                 if (firstDecision == null) {
                     logger.error("Smth went wrong and decision is null");
                     new RuntimeException("Smth went wrong and decision is null");
-                    return;
+                    return null;
                 }
 
                 if (firstDecision.equals(EDecision.STAND)) {
@@ -281,7 +282,7 @@ public class Game {
 
                     if (curPlayer == null) {
                         logger.error("curPlayer is null");
-                        return;
+                        return null;
                     }
 
                     curPlayer.changeBalance(-seat.getCurrentBet());//balance was changed
@@ -297,7 +298,7 @@ public class Game {
 
                     if (tmpSeat == null || tmpInd == -1) {
                         logger.error("tmpSeat or tmpInd is wrong");
-                        return;
+                        return null;
                     }
 
                     curPlayer.getSeats().set(tmpInd, seat);
@@ -363,7 +364,7 @@ public class Game {
 
                     if (splitPlayer == null) {
                         logger.error("splitPlayer is null");
-                        return;
+                        return null;
                     }
 
                     int splitInd = -1;
@@ -376,7 +377,7 @@ public class Game {
 
                     if (splitInd == -1) {
                         logger.error("splitInd is null");
-                        return;
+                        return null;
                     }
 
                     splitPlayer.getSeats().set(splitInd, seat);
@@ -563,6 +564,7 @@ public class Game {
                 s.fullSeatReset();
             }
             p.setWantsToStartGame(false);
+//            p.resetBalanceDifference();
         }
 
         playersBroadcastCallback.playersBroadcast();//need because of s.fullSeatReset() for every player
@@ -593,6 +595,8 @@ public class Game {
         //TODO чтобы играющие (и наблюдающие за игрой) получили актуальный список мест
 
         table.setGame(false);
+
+        return players;
     }
 
     private boolean isValidNextDecision(EDecision decision) {
@@ -627,6 +631,7 @@ public class Game {
 
             if (result == EGameResultStatus.CASHED_OUT) {
                 curPlayer.changeBalance(seat.getCurrentBet() / 2);
+//                curPlayer.setBalanceDifference(curPlayer.getBalance());
             }
 
             if (result == EGameResultStatus.LOST) {
@@ -657,6 +662,10 @@ public class Game {
         }
 
         playersBroadcastCallback.playersBroadcast();//if im not wrong - its for sending of results at the end of the game
+
+        for (Player player : players) {
+            System.err.println(player.getPlayerUUID() + " - balance - " + player.getBalance() + " delta - " + player.getBalanceDifference());
+        }
     }
 
 

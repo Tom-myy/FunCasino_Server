@@ -50,6 +50,10 @@ import java.util.UUID;
 @Table(name = "\"EvoUser\"")
 public class EvoUser {
 
+    @Version
+    @Column(name = "\"version\"")
+    private long version;
+
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")

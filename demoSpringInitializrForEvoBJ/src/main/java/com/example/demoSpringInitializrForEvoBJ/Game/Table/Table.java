@@ -38,7 +38,7 @@ public class Table {
     private EGamePhaseForInterface gamePhase = null;*/
 
     @Getter
-    private Map<String, String> playerNickNames = new HashMap<>();//<playerUUID, playerNickName>
+    private Map<UUID, String> playerNickNames = new HashMap<>();//<playerUUID, playerNickName>
 
     @JsonIgnore
     public void addPlayerNickName(Player player) {
@@ -132,7 +132,7 @@ public class Table {
     }
 
     @JsonIgnore
-    public boolean isThereSeatWithBetForPlayer(String playerUUID) {
+    public boolean isThereSeatWithBetForPlayer(UUID playerUUID) {
         for (Seat seat : seats) {
             if (seat.getPlayerUUID().equals(playerUUID) && seat.getCurrentBet() > 0) {
                 return true;
@@ -142,7 +142,7 @@ public class Table {
     }
 
     @JsonIgnore
-    public boolean isThereSeatForPlayer(String playerUUID) {
+    public boolean isThereSeatForPlayer(UUID playerUUID) {
         for (Seat seat : seats) {
             if (seat.getPlayerUUID().equals(playerUUID)) {
                 return true;

@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.UUID;
+
 /*@Getter
 @Setter*/
 public class Client {
@@ -14,7 +16,7 @@ public class Client {
     @Getter
     @Setter
 //    private Player player = null;
-    private String playerUUID = null;
+    private UUID playerUUID = null;
 
     @Getter
     @Setter

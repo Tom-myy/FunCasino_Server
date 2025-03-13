@@ -9,6 +9,7 @@ import lombok.experimental.Delegate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class Player {
 
@@ -36,9 +37,23 @@ public class Player {
 
     public Player() {}
 
-    public String getPlayerUUID(){
+    public UUID getPlayerUUID(){
         return evoUserDTO.getPlayerUUID();
     }
+
+
+    public void resetBalanceDifference(){
+        evoUserDTO.setBalanceDifference(0);
+    }
+
+    @JsonIgnore
+    public int getBalanceDifference() {
+        return evoUserDTO.getBalanceDifference();
+    }
+
+/*    public void changeBalanceDifference(int amount) {
+        evoUserDTO.changeBalanceDifference(amount);
+    }*/
 
     @JsonIgnore
     public int getTotalBet() {

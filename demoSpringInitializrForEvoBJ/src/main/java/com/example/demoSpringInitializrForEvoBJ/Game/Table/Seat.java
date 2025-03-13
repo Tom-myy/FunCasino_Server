@@ -9,6 +9,7 @@ import com.example.demoSpringInitializrForEvoBJ.Game.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Seat {
@@ -17,7 +18,7 @@ public class Seat {
 
     //Business logic
     @Getter @Setter
-    private String playerUUID;
+    private UUID playerUUID;
     @Getter
     private int seatNumber;
 
@@ -72,7 +73,7 @@ public class Seat {
     public Seat() {
     }
 
-    public Seat(String playerUUID, int seatNumber) {
+    public Seat(UUID playerUUID, int seatNumber) {
         this.playerUUID = playerUUID;
         this.seatNumber = seatNumber;
     }

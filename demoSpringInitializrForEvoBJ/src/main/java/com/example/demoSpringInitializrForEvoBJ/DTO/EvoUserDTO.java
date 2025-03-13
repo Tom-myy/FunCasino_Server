@@ -3,18 +3,21 @@ package com.example.demoSpringInitializrForEvoBJ.DTO;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Getter
 @Setter
 public class EvoUserDTO {
 
-    private String playerUUID;
+    private UUID playerUUID;
 
     private String name;
     private String surname;
     private String nickName;
     private int balance;
+    private int balanceDifference;
 
-    public EvoUserDTO(String playerUUID, String name, String surname, String nickName, int balance) {
+    public EvoUserDTO(UUID playerUUID, String name, String surname, String nickName, int balance) {
         this.playerUUID = playerUUID;
         this.name = name;
         this.surname = surname;
@@ -24,6 +27,7 @@ public class EvoUserDTO {
 
     public void changeBalance(int amount) {
         this.balance += amount;
+        balanceDifference += amount;
     }
 
     public EvoUserDTO() {

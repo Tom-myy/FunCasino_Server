@@ -27,6 +27,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -473,10 +474,12 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     }
 
                     Seat oldSeat = playerForBet.getSeats().get(seatIndexInPlayer);
-                    int oldBet = oldSeat.getCurrentBet();
+//                    int oldBet = oldSeat.getCurrentBet();
+                    BigDecimal oldBet = oldSeat.getCurrentBet();
 
                     playerForBet.getSeats().set(seatIndexInPlayer, seatForBetUpdating);
-                    playerForBet.changeBalance(-(seatForBetUpdating.getCurrentBet() - oldBet));//TODO change
+//                    playerForBet.changeBalance(-(seatForBetUpdating.getCurrentBet() - oldBet));//TODO change
+                    playerForBet.changeBalance((seatForBetUpdating.getCurrentBet().subtract(oldBet)).negate());//TODO change
 
 
                     sendToClient(seatForBetUpdating.getPlayerUUID(), new MyPackage<>(playerForBet, EMessageType.CURRENT_DATA_ABOUT_PLAYER));//TODO here was added ---

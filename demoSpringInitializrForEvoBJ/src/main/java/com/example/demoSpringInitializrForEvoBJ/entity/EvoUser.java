@@ -41,6 +41,8 @@ package com.example.demoSpringInitializrForEvoBJ.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.GenericGenerator;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Data
@@ -82,7 +84,7 @@ public class EvoUser {
     private String pass;
 
     @Column(name = "\"balance\"", nullable = false)
-    private int balance = 1000;
+    private BigDecimal balance = BigDecimal.valueOf(1000);
 
     @PrePersist
     protected void onCreate() {

@@ -11,6 +11,8 @@ import com.example.demoSpringInitializrForEvoBJ.myPackage.EMessageType;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.MyPackage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -285,7 +287,8 @@ public class Game {
                         return null;
                     }
 
-                    curPlayer.changeBalance(-seat.getCurrentBet());//balance was changed
+//                    curPlayer.changeBalance(-seat.getCurrentBet());//balance was changed
+                    curPlayer.changeBalance(seat.getCurrentBet().negate());//balance was changed
 
                     Seat tmpSeat = null;
                     int tmpInd = -1;
@@ -303,7 +306,8 @@ public class Game {
 
                     curPlayer.getSeats().set(tmpInd, seat);
 
-                    seat.setCurrentBet(seat.getCurrentBet() * 2);
+//                    seat.setCurrentBet(seat.getCurrentBet() * 2);
+                    seat.setCurrentBet(seat.getCurrentBet().multiply(BigDecimal.valueOf(2)));
                     playersBroadcastCallback.playersBroadcast();//TODO think here, coz in fact i dont need broadcast (i change only one Player)
 
                     seat.setLastDecision(firstDecision);
@@ -382,7 +386,8 @@ public class Game {
 
                     splitPlayer.getSeats().set(splitInd, seat);
 
-                    splitPlayer.changeBalance(-seat.getCurrentBet());//balance was changed
+//                    splitPlayer.changeBalance(-seat.getCurrentBet());//balance was changed
+                    splitPlayer.changeBalance(seat.getCurrentBet().negate());//balance was changed
 
                     //need to think over the bet for the split and need to send this player
 
@@ -630,7 +635,8 @@ public class Game {
             }
 
             if (result == EGameResultStatus.CASHED_OUT) {
-                curPlayer.changeBalance(seat.getCurrentBet() / 2);
+//                curPlayer.changeBalance(seat.getCurrentBet() / 2);
+                curPlayer.changeBalance(seat.getCurrentBet().divide(BigDecimal.valueOf(2)));
 //                curPlayer.setBalanceDifference(curPlayer.getBalance());
             }
 
@@ -643,11 +649,14 @@ public class Game {
             }
 
             if (result == EGameResultStatus.WON) {
-                curPlayer.changeBalance(seat.getCurrentBet() * 2);
+//                curPlayer.changeBalance(seat.getCurrentBet() * 2);
+                curPlayer.changeBalance(seat.getCurrentBet().multiply(BigDecimal.valueOf(2)));
+
             }
 
             if (result == EGameResultStatus.BLACKJACK) {
-                curPlayer.changeBalance((int) (seat.getCurrentBet() * 2.5));//in general x1.5, but here is 2.5
+//                curPlayer.changeBalance((int) (seat.getCurrentBet() * 2.5));//in general x1.5, but here is 2.5
+                curPlayer.changeBalance(seat.getCurrentBet().multiply(BigDecimal.valueOf(2.5)));
             }
 
             if (result == EGameResultStatus.PUSHED) {

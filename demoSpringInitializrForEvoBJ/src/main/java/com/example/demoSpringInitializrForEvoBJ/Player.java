@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Delegate;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -43,11 +44,11 @@ public class Player {
 
 
     public void resetBalanceDifference(){
-        evoUserDTO.setBalanceDifference(0);
+        evoUserDTO.setBalanceDifference(BigDecimal.ZERO);
     }
 
     @JsonIgnore
-    public int getBalanceDifference() {
+    public BigDecimal getBalanceDifference() {
         return evoUserDTO.getBalanceDifference();
     }
 
@@ -56,12 +57,14 @@ public class Player {
     }*/
 
     @JsonIgnore
-    public int getTotalBet() {
-        if(seats.isEmpty() || seats == null) return 0;
+    public BigDecimal getTotalBet() {
+        if(seats.isEmpty() || seats == null) return BigDecimal.ZERO;
 
-        int totalBet = 0;
+//        int totalBet = 0;
+        BigDecimal totalBet = BigDecimal.ZERO;
         for (Seat seat : seats) {
-            totalBet += seat.getCurrentBet();
+//            totalBet += seat.getCurrentBet();
+            totalBet = totalBet.add(seat.getCurrentBet());
         }
         return totalBet;
     }

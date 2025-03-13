@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.foreign.PaddingLayout;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,7 +27,7 @@ public class EvoUserService {
         return evoUserRepo.findAll();
     }
 
-    public EvoUser addEvoUser(String name, int balance) {
+    public EvoUser addEvoUser(String name, BigDecimal balance) {
         EvoUser player = new EvoUser();
         player.setName(name);
         player.setBalance(balance);
@@ -52,7 +53,8 @@ public class EvoUserService {
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
 //            user.setBalance(user.getBalance() + dto.getBalanceChange());
-            user.setBalance(user.getBalance() + p.getEvoUserDTO().getBalanceDifference());
+//            user.setBalance(user.getBalance() + p.getEvoUserDTO().getBalanceDifference());
+            user.setBalance(user.getBalance().add(p.getEvoUserDTO().getBalanceDifference()));
 //            user.setTotalWins(dto.getTotalWins()); additional details
 
             evoUserRepo.save(user);

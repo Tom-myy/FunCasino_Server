@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 import com.example.demoSpringInitializrForEvoBJ.Game.Card.*;
 import com.example.demoSpringInitializrForEvoBJ.Game.*;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -25,7 +27,7 @@ public class Seat {
 
     public void fullSeatReset(){
         mainScore = 0;
-        currentBet = 0;
+        currentBet = BigDecimal.ZERO;
         mainHand = new ArrayList<>();
         additionalHandForSplit = new ArrayList<>();
         lastDecision = null;
@@ -40,7 +42,7 @@ public class Seat {
     private int additionalScore = 0;
     @Setter
     @Getter
-    private int currentBet = 0;
+    private BigDecimal currentBet = BigDecimal.valueOf(0);
     @Getter
     private List<Card> mainHand = new ArrayList<>();
     @Setter

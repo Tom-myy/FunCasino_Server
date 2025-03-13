@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -100,7 +101,8 @@ public class Table {
     public boolean isThereGameSeat() {
         List<Seat> gameSeats = new ArrayList<>();
         for (Seat seat : seats) {
-            if (seat.getCurrentBet() > 0)
+//            if (seat.getCurrentBet() > 0)
+            if (seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0)
                 gameSeats.add(seat);
         }
 
@@ -111,7 +113,8 @@ public class Table {
     public List<Seat> getAndSetGameSeats() {
         gameSeats = new CopyOnWriteArrayList<>();
         for (Seat seat : seats) {
-            if (seat.getCurrentBet() > 0) {
+//            if (seat.getCurrentBet() > 0) {
+            if (seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0) {
                 gameSeats.add(seat);//TODO mb change it to GameSeatsCollection
 
 /*                for (Player player : players) {//TODO change players' collection to Map
@@ -134,7 +137,8 @@ public class Table {
     @JsonIgnore
     public boolean isThereSeatWithBetForPlayer(UUID playerUUID) {
         for (Seat seat : seats) {
-            if (seat.getPlayerUUID().equals(playerUUID) && seat.getCurrentBet() > 0) {
+//            if (seat.getPlayerUUID().equals(playerUUID) && seat.getCurrentBet() > 0) {
+            if (seat.getPlayerUUID().equals(playerUUID) && seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0) {
                 return true;
             }
         }

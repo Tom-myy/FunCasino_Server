@@ -3,6 +3,7 @@ package com.example.demoSpringInitializrForEvoBJ.DTO;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter
@@ -14,10 +15,10 @@ public class EvoUserDTO {
     private String name;
     private String surname;
     private String nickName;
-    private int balance;
-    private int balanceDifference;
+    private BigDecimal balance;
+    private BigDecimal balanceDifference = BigDecimal.ZERO;
 
-    public EvoUserDTO(UUID playerUUID, String name, String surname, String nickName, int balance) {
+    public EvoUserDTO(UUID playerUUID, String name, String surname, String nickName, BigDecimal balance) {
         this.playerUUID = playerUUID;
         this.name = name;
         this.surname = surname;
@@ -25,9 +26,9 @@ public class EvoUserDTO {
         this.balance = balance;
     }
 
-    public void changeBalance(int amount) {
-        this.balance += amount;
-        balanceDifference += amount;
+    public void changeBalance(BigDecimal amount) {
+        this.balance = balance.add(amount);
+        balanceDifference = balanceDifference.add(amount);
     }
 
     public EvoUserDTO() {

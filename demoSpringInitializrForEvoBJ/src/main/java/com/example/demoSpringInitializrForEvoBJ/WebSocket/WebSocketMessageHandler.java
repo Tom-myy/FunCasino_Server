@@ -503,9 +503,9 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                                     }
 
                                     if (table.isThereGameSeat()) {
-                                        new Thread(() -> {
+/*                                        new Thread(() -> {
 //                                            timerForGameStart.stopTimer();
-                                            /*game.startGame();*/
+                                            *//*game.startGame();*//*
                                             ExecutorService executor = Executors.newSingleThreadExecutor();
                                             Future<List<Player>> future = executor.submit(() -> game.startGame());
 
@@ -526,7 +526,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
                                             evoUserService.updateUsersAfterGame(changedPlayersAfterGame);
 
-                                        }).start();
+                                        }).start();*/
+                                        smthAboutGame();
                                     }
                                 }).start();
                             }
@@ -587,7 +588,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     }
 
                     if (allPlayersWantsToStartGame) {
-                        new Thread(() -> {//TODO add if(game.isGame) if game is already playing
+/*                        new Thread(() -> {//TODO add if(game.isGame) if game is already playing
                             ExecutorService executor = Executors.newSingleThreadExecutor();
                             Future<List<Player>> future = executor.submit(() -> game.startGame());
 
@@ -608,7 +609,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
                             evoUserService.updateUsersAfterGame(changedPlayersAfterGame);
 
-                        }).start();
+                        }).start();*/
+                        smthAboutGame();
                     }
                 } else logger.error("There is no game seat");
                 break;
@@ -632,6 +634,47 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
         }
 
 //        sendToClient(client, responsePackage);
+    }
+
+    public void smthAboutGame(){
+        new Thread(() -> {//TODO add if(game.isGame) if game is already playing
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Future<List<Player>> future = executor.submit(() -> game.startGame());
+
+            List<Player> changedPlayersAfterGame = null; // блокирует до завершения
+            try {
+                changedPlayersAfterGame = future.get();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+            executor.shutdown();
+
+            if (changedPlayersAfterGame == null) {
+                logger.error("changedPlayersAfterGame == null");
+                return;
+            }
+
+            changedPlayersAfterGame = evoUserService.updateUsersAfterGame(changedPlayersAfterGame);
+
+            if (changedPlayersAfterGame == null) {
+                logger.error("changedPlayersAfterGame == null");
+                return;
+            }
+
+            List<EvoUserDTO> freshDtos;
+            freshDtos = evoUserService.getUpdatedUsers(changedPlayersAfterGame);
+
+            if (freshDtos == null) {
+                logger.error("changedPlayersAfterGame == null");
+                return;
+            }
+
+            for(EvoUserDTO dto : freshDtos){
+                sendToClient(dto.getPlayerUUID(), new MyPackage<>(dto, EMessageType.FRESH_DTOS));
+            }
+        }).start();
     }
 
     private int clientCount() {

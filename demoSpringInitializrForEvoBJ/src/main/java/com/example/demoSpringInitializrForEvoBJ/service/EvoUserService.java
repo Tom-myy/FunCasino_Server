@@ -47,7 +47,7 @@ public class EvoUserService {
         evoUserRepo.save(user);
     }*/
 
-    public void updateUsersAfterGame(List<Player> players) {
+    public List<Player> updateUsersAfterGame(List<Player> players) {
         for (Player p : players) {
             EvoUser user = evoUserRepo.findById(p.getEvoUserDTO().getPlayerUUID())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -60,6 +60,22 @@ public class EvoUserService {
             evoUserRepo.save(user);
             p.resetBalanceDifference();
         }
+
+        return players;
     }
+
+    public List<EvoUserDTO> getUpdatedUsers(List<Player> players) {
+        return players.stream()
+                .map(p -> evoUserRepo.findById(p.getEvoUserDTO().getPlayerUUID())
+                        .orElseThrow(() -> new RuntimeException("User not found")))
+                .map(user -> new EvoUserDTO(
+                        user.getUserID(),
+                        user.getName(),
+                        user.getSurname(),
+                        user.getNickName(),
+                        user.getBalance()))
+                .toList();
+    }
+
 
 }

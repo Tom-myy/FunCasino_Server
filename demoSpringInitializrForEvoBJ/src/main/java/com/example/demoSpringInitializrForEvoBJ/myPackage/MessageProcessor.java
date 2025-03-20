@@ -103,7 +103,7 @@ public class MessageProcessor {
         }
     }
 
-    public MyPackage<?> handleSeat(MyPackage<?> myPackage) {
+/*    public MyPackage<?> handleSeat(MyPackage<?> myPackage) {
         return new MyPackage<>("", EMessageType.TAKE_SEAT);
-    }
+    }*/
 }

@@ -12,7 +12,6 @@ import com.example.demoSpringInitializrForEvoBJ.myPackage.ClientFinder;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.EMessageType;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.MessageProcessor;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.MyPackage;
-//import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
 import com.example.demoSpringInitializrForEvoBJ.service.EvoUserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -26,7 +25,6 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.*;
@@ -50,45 +48,32 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     }
 
     private boolean isPlayersChangingCompleted = false;
-    //    private final EvoUserRepository evoUserRepository;
     private final EvoUserService evoUserService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final Table table = new Table(players, this::playersBroadcast);
     private final MessageProcessor messageProcessor;
-    private MyTimer timerForGameStart = new MyTimer(/*TIME_BEFORE_GAME,*/ this);
+    private MyTimer timerForGameStart = new MyTimer(this);
     private final Game game = new Game(this, table, players, this::playersBroadcast, timerForGameStart);
     @Setter
     @Getter
     private boolean gameStarted = false;
     private ClientFinder clientFinder;
-    // Коллекция для хранения подключённых клиентов
-    //    private final Set<WebSocketSession> clients = Collections.synchronizedSet(new HashSet<>());
-//    private final Map<String, Client> notReadyClients = Collections.synchronizedMap(new HashMap<>());
-//    private final Map<String, Client> clients = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, Client> temporaryClients = new ConcurrentHashMap<>();
     private final Map<UUID, Client> authenticatedClients = new ConcurrentHashMap<>();
-    ;
-//    private final Map<String, WebSocketSession> clientsForSending = new HashMap<>();
-
 
     public WebSocketMessageHandler(EvoUserService evoUserService) {
         this.evoUserService = evoUserService;
         messageProcessor = new MessageProcessor(evoUserService);
-        clientFinder = new ClientFinder(/*notReadyClients,*/ temporaryClients, authenticatedClients, players);
+        clientFinder = new ClientFinder(temporaryClients, authenticatedClients, players);
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        // Добавляем нового клиента в коллекцию
-        temporaryClients.put(/*generateUUID()*/session.getId(), new Client(session));
-//        clients.add(session);
-//        System.out.println("Client connected: " + session.getId());
-//        broadcast(new MyPackage<>(clients.size(), EMessageType.CLIENT_COUNT));
+        temporaryClients.put(session.getId(), new Client(session));
     }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        // Десериализация JSON в MyPackage
         String payload = message.getPayload();
         MyPackage<?> myPackage;
         try {
@@ -98,26 +83,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             logger.error("Server got a unknown PACKAGE type!", e);
             return;
         }
-
-/*        String tmpClientUUID = clientFinder.findNotReadyUUIDBySession(session);
-        if(tmpClientUUID == null) {
-            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
-            return;
-        }
-
-        Client tmpClient = clientFinder.findReadyClientByUUID(tmpClientUUID);
-        if(tmpClient == null) {
-            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
-            return;
-        }
-
-        if (clients.containsValue(tmpClient)) {
-//            String clientUUID = clientFinder.findReadyUUIDBySession(client);
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + tmpClientUUID + ")");
-        } else
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + tmpClient.getSession().getId() + " - session ID (not UUID))");*/
-
-//        if (clients.containsValue(client)) {
 
         String tempClientUUID = clientFinder.findTempUUIDBySession(session);
         UUID authClientUUID = clientFinder.findAuthUUIDBySession(session);
@@ -140,62 +105,26 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             return;
         }
 
-//        if (clients.containsValue(client)) {
-/*        if (tmpClient.getConnectionStatus() == ConnectionStatus.CONNECTED) {
-            String clientUUID = clientFinder.findAuthUUIDBySession(session);
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + clientUUID + ")");
-        } else
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + session.getId() + " - session ID (not UUID))");*/
-
-/*        if (authenticatedClients.containsValue(authClient)) {
-            UUID clientUUID = clientFinder.findAuthUUIDBySession(session);
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + clientUUID + ")");
-        } else if (temporaryClients.containsValue(tempClient)) {
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + session.getId() + " - session ID (not UUID))");
-        } else {
-            logger.error("Oh piece of shit, smth went wrong!");
-            return;
-        }*/
-
         if (authClient != null) {
             UUID clientUUID = clientFinder.findAuthUUIDBySession(session);
             logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + clientUUID + ")");
-//        } else if (temporaryClients.containsValue(tempClient)) {
         } else if (tempClient != null) {
             logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + session.getId() + " - session ID (not UUID))");
         } else {
             logger.error("Oh piece of shit, smth went wrong!");
             return;
         }
-/*        String playerUUID = clientFinder.findUUIDByClient(client); //TODO this one
-        if(playerUUID == null) {
-            System.err.println("Smth went wrong, client wasn't found (line 58 =-)");
-            return;
-        }*/
-
-/*       // Десериализация JSON в MyPackage
-        String payload = message.getPayload();
-        MyPackage<?> myPackage;
-        try {
-            myPackage = objectMapper.readValue(payload, new TypeReference<MyPackage<?>>() {});
-        } catch (JsonProcessingException e) {
-            System.err.println("Server got a unknown PACKAGE type!");
-            throw new RuntimeException(e);
-        }*/
 
         switch (myPackage.getMessageType()) {
             case EMessageType.AUTHORIZATION: {
-//                Client client = new Client(session);
                 Client client = clientFinder.findTempClientBySession(session);
-//                String clientUUID = clientFinder.findUUIDBySession(session);
 
-                if (client == null /*|| clientUUID == null*/) {
-//                    logger.error("client == null || clientUUID == null in AUTHORIZATION");
+                if (client == null) {
                     logger.error("client == null in AUTHORIZATION");
                     return;
                 }
 
-                MyPackage<?> responsePackage = messageProcessor.handleAuthorization(myPackage/*, clientUUID*/);
+                MyPackage<?> responsePackage = messageProcessor.handleAuthorization(myPackage);
 
                 if (responsePackage.getMessageType().equals(EMessageType.AUTHORIZATION_ERROR)) {
                     logger.info("Client (" + client.getSession().getId() + " - session ID (not UUID)) failed authorization: Invalid credentials");
@@ -233,59 +162,23 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     client.setConnectionStatusToConnect();
                     sendToClient(client, new MyPackage<>(player, EMessageType.AUTHORIZATION));
 
-
                 } else {
                     temporaryClients.remove(client.getSession().getId());
                     authenticatedClients.put(evoUserDTO.getPlayerUUID(), client);
 
-                    player = new Player();//new
-                    player.setEvoUserDTO(evoUserDTO);//new
+                    player = new Player();
+                    player.setEvoUserDTO(evoUserDTO);
 
                     logger.info("Login successful for user " + evoUserDTO.getNickName() + " (" + evoUserDTO.getPlayerUUID() + ")");
-//                    sendToClient(client, responsePackage);
                     sendToClient(client, new MyPackage<>(player, EMessageType.AUTHORIZATION));
                     players.add(player);
                     table.addPlayerNickName(player);
                 }
 
-
-//                Client client = clientFinder.findClientByUUID(player.getPlayerUUID());
-//                if (client == null) {
-//                    logger.error("Smth went wrong in PLAYER");
-//                    return;
-//                }
                 client.setPlayerUUID(player.getPlayerUUID());
-
-//                clients.put(evoUserDTO.getPlayerUUID(), client);
-//                notReadyClients.put(evoUserDTO.getPlayerUUID(), client);
-
-//                sendToClient(evoUserDTO.getPlayerUUID(), responsePackage);
 
                 break;
             }
-
-/*            case EMessageType.PLAYER: {
-
-                Player player = null;
-                player = objectMapper.convertValue(myPackage.getMessage(), Player.class);
-
-                if (player == null) {
-                    logger.error("Player is null!");
-                    return;
-                }
-
-                players.add(player);
-                table.addPlayerNickName(player);
-
-                Client client = clientFinder.findClientByUUID(player.getPlayerUUID());
-                if (client == null) {
-                    logger.error("Smth went wrong in PLAYER");
-                    return;
-                }
-                client.setPlayerUUID(player.getPlayerUUID());
-
-                break;
-            }*/
 
             case EMessageType.MAIN_FORM_INITIALIZATION: {
                 UUID clientUUID = clientFinder.findAuthUUIDBySession(session);
@@ -294,31 +187,15 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     return;
                 }
 
-//                Client client = notReadyClients.get(clientUUID);
                 Client client = clientFinder.findAuthClientByUUID(clientUUID);
                 client.setConnectionStatusToConnect();
                 authenticatedClients.put(clientUUID, client);
 
                 client.setReadyToGetMessages(true);
 
-                broadcast(new MyPackage<>(/*clients.size()*/clientCount(), EMessageType.CLIENT_COUNT));
+                broadcast(new MyPackage<>(clientCount(), EMessageType.CLIENT_COUNT));
 
-//                String uuid = clients.get
-/*                String clientUUID = "";
-                for (Map.Entry<String, WebSocketSession> entry : clients.entrySet()) {
-                    if (Objects.equals(entry.getValue(), client)) {
-                        clientUUID = entry.getKey();
-                    }
-                }
-
-                if (clientUUID.isEmpty()) {
-                    logger.error("clientUUID is empty!");
-                    return;
-                }*/
-
-
-//                sendToClient(clientUUID, new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
-                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));//тут лучше отправлять не коллекц мест, а стол со стутусом tableStatus
+                broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));
 
                 return;
             }
@@ -329,7 +206,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 //changing seat in Table
                 if (table.isSeatBusy(seatForTaking.getSeatNumber())) {
                     logger.error("Seat is busy");
-//                    sendToClient(client, new MyPackage<>("", EMessageType.SEAT_BUSY));
                     return;
                 }
 
@@ -339,25 +215,17 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 for (Player p : players) {
                     if (p.getPlayerUUID().equals(seatForTaking.getPlayerUUID())) {
                         p.addSeat(seatForTaking);
-//                        sendToClient(seatForTaking.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
                         sendToClient(seatForTaking.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
                         break;
                     }
                 }
-//                responsePackage = messageProcessor.handleSeat(myPackage);
-//                responsePackage = new MyPackage<>("", EMessageType.SEAT_OK);//TODO broadcast for displaying to everyone
-//                sendToClient(/*playerUUID*/ seatForTaking.getPlayerUUID(), new MyPackage<>(seatForTaking, EMessageType.TAKE_SEAT_OK));//мб не бродкастить это, а только там где TABLE _STATUS
 
-
-//                broadcast(new MyPackage<>(table.getSeats(), EMessageType.TABLE_STATUS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
-                broadcast(new MyPackage<>(table.getSeats(), EMessageType.SEATS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
+                broadcast(new MyPackage<>(table.getSeats(), EMessageType.SEATS));
 
                 if (table.isThereSeatWithBetForPlayer(seatForTaking.getPlayerUUID())) {//TODO think over it - it doesnt work properly
-                    sendToClient(/*playerUUID*/ seatForTaking.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                    sendToClient(seatForTaking.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
                 } else
-                    sendToClient(/*playerUUID*/ seatForTaking.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-
-//                sendToClient(/*playerUUID*/ seatForTaking.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                    sendToClient(seatForTaking.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
 
                 break;
             }
@@ -368,7 +236,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                 if (!table.isSeatBusy(seatForLeaving.getSeatNumber())) {
                     logger.error("There is no such seat for leaving at the table");
                     new Exception().printStackTrace();
-//                    sendToClient(client, new MyPackage<>("", EMessageType.SEAT_BUSY));
                     return;
                 }
 
@@ -403,27 +270,15 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
                 table.removePlayerAtTheTableByKey(seatForLeaving.getSeatNumber());
 
-/*                if (table.isThereSeatWithBetForPlayer(seatForLeaving.getPlayerUUID()) ||
-                        table.isThereSeatForPlayer(seatForLeaving.getPlayerUUID())) {//TODO think over it - it doesnt work properly
-                    sendToClient(*//*playerUUID*//* seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-                } else
-                    sendToClient(*//*playerUUID*//* seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));*/
                 if (table.isThereSeatWithBetForPlayer(seatForLeaving.getPlayerUUID())) {//TODO think over it - it doesnt work properly
-                    sendToClient(/*playerUUID*/ seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                    sendToClient(seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
                 } else if (table.isThereSeatForPlayer(seatForLeaving.getPlayerUUID())) {
-                    sendToClient(/*playerUUID*/ seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                    sendToClient(seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
                 } else
-                    sendToClient(/*playerUUID*/ seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                    sendToClient( seatForLeaving.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
 
-
-//                seatForLeaving.setPlayerUUID(null);
                 seatForLeaving = null;
                 broadcast(new MyPackage<>(table.getSeats(), EMessageType.SEATS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
-//                broadcast(new MyPackage<>(table.getSeats(), EMessageType.TABLE_STATUS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
-//                responsePackage = messageProcessor.handleSeat(myPackage);
-//                responsePackage = new MyPackage<>("", EMessageType.SEAT_OK);//TODO broadcast for displaying to everyone
-//                sendToClient(playerUUID, new MyPackage<>(seatForLeaving, EMessageType.LEAVE_SEAT_OK));//мб не бродкастить это, а только там где TABLE _STATUS
-
 
                 break;
             }
@@ -474,20 +329,16 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     }
 
                     Seat oldSeat = playerForBet.getSeats().get(seatIndexInPlayer);
-//                    int oldBet = oldSeat.getCurrentBet();
                     BigDecimal oldBet = oldSeat.getCurrentBet();
 
                     playerForBet.getSeats().set(seatIndexInPlayer, seatForBetUpdating);
-//                    playerForBet.changeBalance(-(seatForBetUpdating.getCurrentBet() - oldBet));//TODO change
-                    playerForBet.changeBalance((seatForBetUpdating.getCurrentBet().subtract(oldBet)).negate());//TODO change
-
+                    playerForBet.changeBalance((seatForBetUpdating.getCurrentBet().subtract(oldBet)).negate());
 
                     sendToClient(seatForBetUpdating.getPlayerUUID(), new MyPackage<>(playerForBet, EMessageType.CURRENT_DATA_ABOUT_PLAYER));//TODO here was added ---
 
                     {//before-timerForGameStart
                         if (!timerForGameStart.isRunning()) {
                             if (table.isThereGameSeat()) {
-//                                broadcast(new MyPackage<>(TIME_BEFORE_GAME, EMessageType.TIME_BEFORE_GAME));
                                 new Thread(() -> {
                                     timerForGameStart.startTimer(TIME_BEFORE_GAME, "BEFORE_GAME");
                                 }).start();
@@ -499,34 +350,9 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                                 }
 
                                 new Thread(() -> {
-                                    while (timerForGameStart.isRunning()) {
-                                    }
+                                    while (timerForGameStart.isRunning()) {}
 
                                     if (table.isThereGameSeat()) {
-/*                                        new Thread(() -> {
-//                                            timerForGameStart.stopTimer();
-                                            *//*game.startGame();*//*
-                                            ExecutorService executor = Executors.newSingleThreadExecutor();
-                                            Future<List<Player>> future = executor.submit(() -> game.startGame());
-
-                                            List<Player> changedPlayersAfterGame = null; // блокирует до завершения
-                                            try {
-                                                changedPlayersAfterGame = future.get();
-                                            } catch (InterruptedException e) {
-                                                throw new RuntimeException(e);
-                                            } catch (ExecutionException e) {
-                                                throw new RuntimeException(e);
-                                            }
-                                            executor.shutdown();
-
-                                            if (changedPlayersAfterGame == null) {
-                                                logger.error("changedPlayersAfterGame == null");
-                                                return;
-                                            }
-
-                                            evoUserService.updateUsersAfterGame(changedPlayersAfterGame);
-
-                                        }).start();*/
                                         smthAboutGame();
                                     }
                                 }).start();
@@ -535,22 +361,10 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     }
                 }
 
-                broadcast(new MyPackage<>(table.getSeats(), EMessageType.SEATS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
-//                broadcast(new MyPackage<>(table.getSeats(), EMessageType.TABLE_STATUS));//бродкастить коллекицю мест со статусом EMessageType.SEATS
+                broadcast(new MyPackage<>(table.getSeats(), EMessageType.SEATS));
                 sendToClient(seatForBetUpdating.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-//                sendToClient(client, new MyPackage<>(seatForBetUpdating, EMessageType.UPDATE_SEAT_BET_OK));//мб не бродкастить это, а только там где TABLE _STATUS
                 break;
             }
-
-/*            case EMessageType.REQUEST_TO_START_GAME: {
-                if (table.isThereGameSeat())
-                    new Thread(() -> {
-                        game.startGame();
-                    }).start();
-
-                else logger.error("There is no game seat");
-                break;
-            }*/
 
             case EMessageType.REQUEST_TO_START_GAME: {
                 if (table.isThereGameSeat()) {
@@ -588,28 +402,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     }
 
                     if (allPlayersWantsToStartGame) {
-/*                        new Thread(() -> {//TODO add if(game.isGame) if game is already playing
-                            ExecutorService executor = Executors.newSingleThreadExecutor();
-                            Future<List<Player>> future = executor.submit(() -> game.startGame());
-
-                            List<Player> changedPlayersAfterGame = null; // блокирует до завершения
-                            try {
-                                changedPlayersAfterGame = future.get();
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            } catch (ExecutionException e) {
-                                throw new RuntimeException(e);
-                            }
-                            executor.shutdown();
-
-                            if (changedPlayersAfterGame == null) {
-                                logger.error("changedPlayersAfterGame == null");
-                                return;
-                            }
-
-                            evoUserService.updateUsersAfterGame(changedPlayersAfterGame);
-
-                        }).start();*/
                         smthAboutGame();
                     }
                 } else logger.error("There is no game seat");
@@ -632,8 +424,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             default:
                 logger.error("Server got a unknown MESSAGE type!");
         }
-
-//        sendToClient(client, responsePackage);
     }
 
     public void smthAboutGame(){
@@ -685,19 +475,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
         return count;
     }
 
-/*    public List<Player> getPlayersInGame() {
-        List<Player> gamePlayers = new ArrayList<>();
-
-        for (Player p : players) {
-            if (p.isWantsToStartGame()) {
-                gamePlayers.add(p);
-            }
-        }
-
-        System.out.println(gamePlayers.size());
-        return gamePlayers;
-    }*/
-
     public List<Player> getPlayersInGame() {
         List<Player> gamePlayers = new ArrayList<>();
 
@@ -717,42 +494,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
         }
     }
 
-/*    private void handleAuthorization(WebSocketSession session, MyPackage<?> myPackage) throws Exception {
-
-        LoginRequestDTO loginRequest = objectMapper.convertValue(myPackage.getMessage(), LoginRequestDTO.class);
-
-        // Взаимодействие с БД
-        Optional<EvoUser> optionalUser = evoUserRepository.findByLoginAndPass(
-                loginRequest.getNickname(),
-                loginRequest.getPassword()
-        );
-
-        if (optionalUser.isPresent()) {
-            EvoUser user = optionalUser.get();
-            System.out.println("Login successful for user: " + user.getNickName());
-
-            // Создание ответа
-            EvoUserDTO responseUser = new EvoUserDTO(
-                    generateUUID(),
-                    user.getName(),
-                    user.getSurname(),
-                    user.getNickName(),
-                    user.getBalance()
-            );
-
-            // Отправка успешного ответа
-            sendToClient(session, new MyPackage<>(responseUser, EMessageType.AUTHORIZATION));
-        } else {
-            System.out.println("Login failed: Invalid credentials");
-            // Отправка ошибки
-            sendToClient(session, new MyPackage<>("Invalid login or password", EMessageType.AUTHORIZATION_ERROR));
-        }
-    }*/
-
-    private String generateUUID() {
-        return java.util.UUID.randomUUID().toString();
-    }
-
     @Override
     public void afterConnectionClosed(WebSocketSession client, CloseStatus status) {
         new Thread(() -> {
@@ -761,7 +502,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     }
 
     public void removingInactiveClient(WebSocketSession session) {
-
         if (authenticatedClients.containsValue(clientFinder.findAuthClientBySession(session))) {
             Client client = clientFinder.findAuthClientBySession(session);
             client.setConnectionStatusToDisconnect();
@@ -782,9 +522,8 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
             logger.info("Client disconnected: " + clientUUID);
 
-            broadcast(new MyPackage<>(/*clients.size()*/clientCount(), EMessageType.CLIENT_COUNT));
+            broadcast(new MyPackage<>(clientCount(), EMessageType.CLIENT_COUNT));
             broadcast(new MyPackage<>(table, EMessageType.TABLE_STATUS));
-
         }
     }
 
@@ -808,20 +547,18 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     logger.info("Broadcast to (" + clientFinder.findAuthUUIDBySession(client.getSession()) + "): msg_json - " + responseJson);
                 } catch (Exception e) {
                     if (client.getConnectionStatus() == ConnectionStatus.DISCONNECTED) {
-
+                        //mb todo smth
                     } else {
                         e.printStackTrace();
                         logger.error("Error while broadcasting: " + responseJson, e);
-//                    return;
                     }
                 }
             }
         }
     }
 
-
     @Override
-    public void sendToClient(/*WebSocketSession client*/ UUID playerUUID, MyPackage<?> message) {
+    public void sendToClient(UUID playerUUID, MyPackage<?> message) {
         String responseJson;
         try {
             responseJson = objectMapper.writeValueAsString(message);
@@ -836,8 +573,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             return;
         }
 
-//        WebSocketSession session = clients.get(playerUUID);
-
         if (message.getMessageType() == EMessageType.CHANGED_SEAT_FOR_GAME && !client.isReadyToGetMessages()) return;
 
         try {
@@ -845,7 +580,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
             logger.info("SendToClient (" + playerUUID + "): msg_json - " + responseJson);
         } catch (Exception e) {
             if (client.getConnectionStatus() == ConnectionStatus.DISCONNECTED) {
-
+                //mb todo smth
             } else
                 e.printStackTrace();
         }
@@ -863,7 +598,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
 
         try {
             client.getSession().sendMessage(new TextMessage(responseJson));
-//            logger.info("SendToClient (" + clientFinder.findUUIDByClient(client) + "):\n msg_json - " + responseJson);
             logger.info("SendToClient (" + client.getSession().getId() + " - session ID (not UUID)): msg_json - " + responseJson);
         } catch (Exception e) {
             if (client.getConnectionStatus() == ConnectionStatus.DISCONNECTED) {
@@ -874,18 +608,7 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
     }
 
     @Override
-    public void onMessage(MyPackage<?> myPackage) {
-
-    }
-
-    @Override
     public void timeWasChanged(int seconds, String flag) {
-/*        System.out.println("in timeWasChanged");
-        for (Player p : getPlayersInGame()) {
-            System.out.println("before time sending");
-            sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER));
-            System.out.println("time must be sent");
-        }*/
         if (flag.equalsIgnoreCase("BEFORE_GAME")) {
             if (seconds == -1)
                 broadcast(new MyPackage<>("", EMessageType.TIMER_CANCEL));//TODO mustn't broadcast - players at the table\in the game
@@ -897,7 +620,6 @@ public class WebSocketMessageHandler extends TextWebSocketHandler implements Gam
                     sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER_CANCEL));
                 else
                     sendToClient(p.getPlayerUUID(), new MyPackage<>(seconds, EMessageType.TIMER));
-
             }
         }
     }

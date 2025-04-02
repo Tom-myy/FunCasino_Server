@@ -1,0 +1,4 @@
+game:
+  timer:
+    betting-time: 20
+    decision-time: 30

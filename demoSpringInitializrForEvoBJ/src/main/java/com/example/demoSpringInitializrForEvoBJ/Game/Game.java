@@ -4,14 +4,18 @@ import com.example.demoSpringInitializrForEvoBJ.Game.Card.Card;
 import com.example.demoSpringInitializrForEvoBJ.Game.Card.OneUsualDeck;
 import com.example.demoSpringInitializrForEvoBJ.Game.Table.Seat;
 import com.example.demoSpringInitializrForEvoBJ.Game.Table.Table;
-import com.example.demoSpringInitializrForEvoBJ.GameToMessageHandlerListener;
+import com.example.demoSpringInitializrForEvoBJ.Message.MessageSender;
 import com.example.demoSpringInitializrForEvoBJ.Player;
-import com.example.demoSpringInitializrForEvoBJ.PlayersBroadcastCallback;
+import com.example.demoSpringInitializrForEvoBJ.PlayerRegistry;
+import com.example.demoSpringInitializrForEvoBJ.TimerType;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.EMessageType;
 import com.example.demoSpringInitializrForEvoBJ.myPackage.MyPackage;
+import com.example.demoSpringInitializrForEvoBJ.ttimer.DecisionTimeObserver;
+import com.example.demoSpringInitializrForEvoBJ.ttimer.TimerService;
+import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +23,6 @@ import java.util.List;
 
 public class Game {
     private static final Logger logger = LoggerFactory.getLogger(Game.class);
-
     private static final int TIME_FOR_DECISION = 10;
     private static final int TIME_FOR_RESULT_ANNOUNCEMENT = 5000;
     private static final int TIME_BETWEEN_CARDS = 1000;
@@ -27,10 +30,20 @@ public class Game {
     private List<Card> gameDeck = null;
     private Dealer dealer;
     private Table table;
-    private MyTimer timer;
+//    private MyTimer timer;
+    private TimerService timerService;
+    private PlayerRegistry playerRegistry;
+    @Getter
+    @Setter
+    private boolean isGameRunning = false;
+    private DecisionTimeObserver decisionTimeObserver;
 
 
-    PlayersBroadcastCallback playersBroadcastCallback;//It's for sending to certain player his player data
+/*    PlayersBroadcastCallback playersBroadcastCallback;//It's for sending to certain player his player data
+    private GameToMessageHandlerListener listener;*/
+
+    private final MessageSender messageSender;//TODO bad violation!
+
     private List<Player> players;//for money management
 
 
@@ -40,7 +53,6 @@ public class Game {
     private static final int MINIMUM_ACE_SUMMAND = 1;
     private static final int MAXIMUM_ACE_SUMMAND = 11;
 
-    private GameToMessageHandlerListener listener;
 
     private List<Seat> gameSeats;
 
@@ -62,7 +74,8 @@ public class Game {
                 decision.equals(EDecision.STAND)) {
 
             decisionField = decision;
-            timer.stopTimer();
+//            timer.stopTimer();
+            timerService.stop(TimerType.DECISION_TIME);
         } else {
             System.err.println("Server got invalid decision: " + decision);
         }
@@ -70,27 +83,39 @@ public class Game {
 
     public void changeGameStatusForInterface(EGamePhaseForInterface status) {
         gameStatusForInterface = status;
-        listener.broadcast(new MyPackage<>(gameStatusForInterface, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+//        listener.broadcast(new MyPackage<>(gameStatusForInterface, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+        messageSender.broadcast(new MyPackage<>(gameStatusForInterface, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
     }
 
     public int getCountOfPlayersReadyForGame() {
         return gameSeats.size();
     }
 
-    public Game(GameToMessageHandlerListener listener, Table table, List<Player> players, PlayersBroadcastCallback callback, MyTimer timer) {
-        this.listener = listener;
+    public Game(Table table, MessageSender messageSender, TimerService timerService, PlayerRegistry playerRegistry, DecisionTimeObserver decisionTimeObserver) {
+//        this.listener = listener;
         this.table = table;
-        this.players = players;
-        this.playersBroadcastCallback = callback;
-        this.timer = timer;
+//        this.players = players;
+//        this.playersBroadcastCallback = callback;
+//        this.timer = timer;
+//        this.messageSender = messageSender;
+        this.messageSender = messageSender;
+        this.timerService = timerService;
+        this.playerRegistry = playerRegistry;
+        this.decisionTimeObserver = decisionTimeObserver;
+        players = playerRegistry.getPlayers();
     }
 
     public List<Player> startGame() {
         if (table.isGame()) {
             return null;
-        } else table.setGame(true);
+        } else {
+            table.setGame(true);
+            isGameRunning = true;
+        }
 
-        timer.stopTimer();
+//        timer.stopTimer();
+        timerService.stop(TimerType.DECISION_TIME);
+
 
 //        listener.broadcast(new MyPackage<>("", EMessageType.GAME_STARTED));
         gameSeats = table.getAndSetGameSeats();
@@ -102,18 +127,18 @@ public class Game {
             for (Player p : players) {
                 if (p.getPlayerUUID().equals(s.getPlayerUUID())) {
                     p.setInTheGame(true);
-                    listener.sendToClient(p.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
+                    messageSender.sendToClient(p.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
                     break;
                 }
 //                p.resetBalanceDifference();
             }
         }
 
-        listener.broadcast(new MyPackage<>(gameSeats, EMessageType.GAME_STARTED/*TABLE_STATUS*/));//mb send after resetGameResultStatus
+        messageSender.broadcast(new MyPackage<>(gameSeats, EMessageType.GAME_STARTED/*TABLE_STATUS*/));//mb send after resetGameResultStatus
 //        listener.broadcast(new MyPackage<>(TIME_FOR_DECISION, EMessageType.TIME_FOR_DECISION));
         table.setDealer(new Dealer());
         dealer = table.getDealer();
-        listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO mb not to send the dealer (//mb send after resetGameResultStatus)
+        messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO mb not to send the dealer (//mb send after resetGameResultStatus)
 //        String nextGame;
 
         if (gameDeck == null) {
@@ -124,7 +149,7 @@ public class Game {
         for (Seat seat : gameSeats) { //TODO mb change PROGRESSING to null
             seat.resetGameResultStatus();
         }
-        listener.broadcast(new MyPackage<>(EGameResultStatus.PROGRESSING, EMessageType.E_GAME_RESULT_STATUS));
+        messageSender.broadcast(new MyPackage<>(EGameResultStatus.PROGRESSING, EMessageType.E_GAME_RESULT_STATUS));
 
 //        dealer.resetGameResultStatus(); //TODO mb change PROGRESSING to null
 //        listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO mb not to send the dealer
@@ -141,7 +166,7 @@ public class Game {
 
                 seat.calculateScore(card);
 
-                listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                 if (seat.getMainScore() == 21) {
                     System.out.println(card.getInitial() + " of " + card.getSuit() + " was " +
@@ -149,7 +174,7 @@ public class Game {
                     //TODO display it in the players' interface
 
                     seat.setGameResultStatus(EGameResultStatus.BLACKJACK);
-                    listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                    messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                 } else {
                     System.out.println(card.getInitial() + " of " + card.getSuit() + " was " +
@@ -171,14 +196,14 @@ public class Game {
                         "dealt to '" + dealer.getNickName() + "', score = " + dealer.getScore());
 
                 dealer.calculateScore(card);
-                listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
+                messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
 
             } else {//TODO do it more beautiful and smarter
                 System.out.println("hidden card was dealt to '" + dealer.getNickName() + "'" +
                         ", score = " + dealer.getCurrentCardInHandByIndex(0).getCoefficient() + "+");
 
                 dealer.setHiddenCard(card);
-                listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
+                messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
             }
 
             try {
@@ -215,7 +240,7 @@ public class Game {
 
                 if (firstDecision.equals(EDecision.STAND)) {
                     seat.setLastDecision(firstDecision);
-                    listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                    messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
                     System.out.println(seat.getPlayerUUID() + " decided to " + firstDecision);
 
                     System.out.println(seat.getPlayerUUID() + " is standing on " + seat.getMainScore());
@@ -240,7 +265,7 @@ public class Game {
                         System.out.println(card.getInitial() + " of " + card.getSuit() + " was " +
                                 "dealt to '" + seat.getPlayerUUID() + "'");
 
-                        listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                        messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                         if (seat.getMainScore() < 21) {
                             do {
@@ -259,7 +284,7 @@ public class Game {
                                     System.out.println(seat.getPlayerUUID() + " CASHOUT");
                                     isStand = true;
                                     seat.setGameResultStatus(EGameResultStatus.CASHED_OUT);
-                                    listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                                    messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                                     break;
                                 }
@@ -308,7 +333,7 @@ public class Game {
 
 //                    seat.setCurrentBet(seat.getCurrentBet() * 2);
                     seat.setCurrentBet(seat.getCurrentBet().multiply(BigDecimal.valueOf(2)));
-                    playersBroadcastCallback.playersBroadcast();//TODO think here, coz in fact i dont need broadcast (i change only one Player)
+                    playersBroadcast();//TODO think here, coz in fact i dont need broadcast (i change only one Player)
 
                     seat.setLastDecision(firstDecision);
                     System.out.println(seat.getPlayerUUID() + " decided to " + firstDecision);
@@ -317,7 +342,7 @@ public class Game {
 
                     seat.calculateScore(card);
 
-                    listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                    messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                     System.out.println(firstDecision + " for " + seat.getPlayerUUID());
                     System.out.println(card.getInitial() + " of " + card.getSuit() + " was " +
@@ -399,7 +424,7 @@ public class Game {
                     seat.setLastDecision(firstDecision);
                     System.out.println(seat.getPlayerUUID() + " cashed-out");
                     seat.setGameResultStatus(EGameResultStatus.CASHED_OUT);
-                    listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                    messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
                     break;
                 }
@@ -409,12 +434,12 @@ public class Game {
                 System.out.println(seat.getPlayerUUID() + " has BLACKJACK (" + seat.getMainScore() + ") - amazing");
 
                 seat.setGameResultStatus(EGameResultStatus.BLACKJACK);//тк если у диллера тоже BJ, то у игрока PUSH
-                listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
             }
             if (seat.getMainScore() == 21 && seat.getMainHand().size() > 2) {
                 System.out.println(seat.getPlayerUUID() + " has " + seat.getMainScore() + " - good catch");
-                listener.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
+                messageSender.broadcast(new MyPackage<>(seat, EMessageType.CHANGED_SEAT_FOR_GAME));
 
             }
             if (seat.getMainScore() > 21) {
@@ -434,7 +459,7 @@ public class Game {
         }
 
         dealer.calculateScore(dealer.getHiddenCard());
-        listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO is this necessary?
+        messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));//TODO is this necessary?
         try {
             Thread.sleep(TIME_BETWEEN_CARDS);//1s but it's not TIME_BETWEEN_CARDS
         } catch (InterruptedException e) {
@@ -447,7 +472,7 @@ public class Game {
             System.out.println("hit for 'Dealer'");
             Card card = gameDeck.removeLast();
             dealer.calculateScore(card);
-            listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
+            messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
             System.out.println(card.getInitial() + " of " + card.getSuit() + " was " +
                     "dealt to '" + dealer.getNickName() + "', score - " + dealer.getScore());
 
@@ -469,7 +494,7 @@ public class Game {
                 System.out.println("Unfortunately, " + dealer.getNickName() + " has BLACKJACK (" + dealer.getScore() + ")");
 
                 dealer.setGameResultStatus(EGameResultStatus.BLACKJACK);
-                listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
+                messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
 
 
                 gameSeats.stream()//TODO develop insurance if Dealer has ace
@@ -522,7 +547,7 @@ public class Game {
                 System.out.println(dealer.getNickName() + " has TOO MANY (" + dealer.getScore() + ")");
 
                 dealer.setGameResultStatus(EGameResultStatus.TOO_MANY);
-                listener.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
+                messageSender.broadcast(new MyPackage<>(dealer, EMessageType.DEALER));
 
 
                 gameSeats.stream()
@@ -548,7 +573,7 @@ public class Game {
         distributeMoney();
         //playersBroadcastCallback.playersBroadcast();//TODO as for me it's pointless coz i do it in distributeMoney() before this line
 
-        listener.broadcast(new MyPackage<>(gameSeats, EMessageType.GAME_RESULTS));//broadcasting of gameSeats with last game data
+        messageSender.broadcast(new MyPackage<>(gameSeats, EMessageType.GAME_RESULTS));//broadcasting of gameSeats with last game data
 
         //this block is for checking amount of cards
         if (gameDeck.size() < ((gameSeats.size() + 1) * 4)) {
@@ -572,7 +597,7 @@ public class Game {
 //            p.resetBalanceDifference();
         }
 
-        playersBroadcastCallback.playersBroadcast();//need because of s.fullSeatReset() for every player
+        playersBroadcast();//need because of s.fullSeatReset() for every player
 
         gameSeats = null;
 
@@ -582,24 +607,25 @@ public class Game {
 
         for (Player player : players) {
             if (player.getSeats().isEmpty()) {
-                listener.sendToClient(player.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                messageSender.sendToClient(player.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
             } else {
-                listener.sendToClient(player.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
+                messageSender.sendToClient(player.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
             }
         }
 
         for (Player p : players) {
             p.setInTheGame(false);
-            listener.sendToClient(p.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
+            messageSender.sendToClient(p.getPlayerUUID(), new MyPackage<>(p, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
         }
         table.setDealer(null);//мб необязательно
-        listener.broadcast(new MyPackage<>(table.getSeats(), EMessageType.GAME_FINISHED));//sending exactly busy seats at the table (not gameSeats)...
+        messageSender.broadcast(new MyPackage<>(table.getSeats(), EMessageType.GAME_FINISHED));//sending exactly busy seats at the table (not gameSeats)...
         //TODO надо сделать так, чтобы играющий не мог занять ещё места пока не закончится игра
 
         //TODO (по поводу верхнего я хз как оно) пока что в этой реализации сделано так, что когда GAME _ FINISHED, то отправляется коллекция обычных мест
         //TODO чтобы играющие (и наблюдающие за игрой) получили актуальный список мест
 
         table.setGame(false);
+        isGameRunning = false;
 
         return players;
     }
@@ -664,13 +690,13 @@ public class Game {
             }
         }
 
-        if (playersBroadcastCallback == null) {
+/*        if (playersBroadcastCallback == null) {
             logger.error("playersBroadcastCallback is null");
             new Exception("playersBroadcastCallback is null").printStackTrace();
             return;
-        }
+        }*/
 
-        playersBroadcastCallback.playersBroadcast();//if im not wrong - its for sending of results at the end of the game
+        playersBroadcast();//if im not wrong - its for sending of results at the end of the game
 
         for (Player player : players) {
             System.err.println(player.getPlayerUUID() + " - balance - " + player.getBalance() + " delta - " + player.getBalanceDifference());
@@ -680,13 +706,23 @@ public class Game {
 
     public EDecision gettingDecision(Seat seat) {
         //TODO display it in the players' interface
-        listener.broadcast(new MyPackage<>(seat, EMessageType.CURRENT_SEAT));
+        messageSender.broadcast(new MyPackage<>(seat, EMessageType.CURRENT_SEAT));
 
 //        timerForDecision = new MyTimer();//TODO mb initialise not here...
 
-        new Thread(() -> {
-            timer.startTimer(TIME_FOR_DECISION, "GAME");
-        }).start();
+/*        new Thread(() -> {
+//            timer.startTimer(TIME_FOR_DECISION);
+            timerService.start(TimerType.DECISION_TIME, 15, );
+
+        }).start();*/
+/*        timerService.start(TimerType.DECISION_TIME, TIME_FOR_DECISION, time -> {
+            messageSender.broadcast(new MyPackage<>(time, EMessageType.TIMER));
+
+            if (time == 0 && decisionField == null) {
+                decisionField = basicDecision(seat);
+            }
+        });*/
+        timerService.start(TimerType.DECISION_TIME, TIME_FOR_DECISION, decisionTimeObserver);
 
         try {//it's necessarily because of thread...
             Thread.sleep(10);
@@ -694,7 +730,7 @@ public class Game {
             throw new RuntimeException(e);
         }
 
-        while (decisionField == null && timer.isRunning()) {
+        while (decisionField == null && timerService.isRunning(TimerType.DECISION_TIME)) {
             System.out.println("Decision button is empty, but timer is running yet");
             try {
                 Thread.sleep(1000);
@@ -736,5 +772,12 @@ public class Game {
 
     public boolean isFirstDecision(Seat seat) {//idk
         return seat.getLastDecision() == null;
+    }
+
+    //TODO playersBroadcast - bed violation!!!
+    public void playersBroadcast() {//It's for sending to certain player his player data
+        for (Player player : players) {
+            messageSender.sendToClient(player.getPlayerUUID(), new MyPackage<>(player, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
+        }
     }
 }

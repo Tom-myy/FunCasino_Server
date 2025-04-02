@@ -1,9 +1,7 @@
 package com.example.demoSpringInitializrForEvoBJ.Game.Table;
 
 import com.example.demoSpringInitializrForEvoBJ.Game.Dealer;
-import com.example.demoSpringInitializrForEvoBJ.Game.EGamePhaseForInterface;
 import com.example.demoSpringInitializrForEvoBJ.Player;
-import com.example.demoSpringInitializrForEvoBJ.PlayersBroadcastCallback;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,8 +16,7 @@ public class Table {
 
     @JsonIgnore
     private static final Logger logger = LoggerFactory.getLogger(Table.class);
-    @JsonIgnore
-    private static PlayersBroadcastCallback playersBroadcastCallback;//It's for sending to certain player his player data
+
     @JsonIgnore
     private List<Player> players = new LinkedList<>();//for money management
 
@@ -62,9 +59,10 @@ public class Table {
     }
 
     @JsonIgnore
-    public Table(List<Player> players, PlayersBroadcastCallback callback) {
+    public Table(List<Player> players/*, PlayersBroadcastCallback callback*//*, MessageSender messageSender*/) {
         this.players = players;
-        this.playersBroadcastCallback = callback;
+//        this.playersBroadcastCallback = callback;
+//        this.messageSender = messageSender;
     }
 
     //Common
@@ -83,7 +81,12 @@ public class Table {
     }
 
     @JsonIgnore
-    public void removePlayerAtTheTableByKey(int key) {
+    public void removeSeat(Seat seat) {
+        seats.remove(seat);
+    }
+
+    @JsonIgnore
+    public void removeSeatAtTheTableByKey(int key) {
         int index = -1;
 
         for (Seat seat : seats) {
@@ -97,7 +100,7 @@ public class Table {
         } else System.err.println("There is no such seat with key " + key);
     }
 
-    @JsonIgnore
+/*    @JsonIgnore
     public boolean isThereGameSeat() {
         List<Seat> gameSeats = new ArrayList<>();
         for (Seat seat : seats) {
@@ -107,32 +110,40 @@ public class Table {
         }
 
         return !gameSeats.isEmpty();
+    }*/
+
+    @JsonIgnore
+    public List<Seat> getCalculatedGameSeats() {
+        List<Seat> calculatedGameSeats = new CopyOnWriteArrayList<>();
+        for (Seat seat : seats) {
+            if (seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0) {
+                calculatedGameSeats.add(seat);
+            }
+        }
+        calculatedGameSeats.sort(Comparator.comparing(Seat::getSeatNumber));
+
+        return calculatedGameSeats;
     }
 
     @JsonIgnore
     public List<Seat> getAndSetGameSeats() {
-        gameSeats = new CopyOnWriteArrayList<>();
-        for (Seat seat : seats) {
-//            if (seat.getCurrentBet() > 0) {
-            if (seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0) {
-                gameSeats.add(seat);//TODO mb change it to GameSeatsCollection
-
-/*                for (Player player : players) {//TODO change players' collection to Map
-                    if (player.getPlayerUUID().equals(seat.getPlayerUUID())) {
-                        player.changeBalance(-seat.getCurrentBet());
-                    }
-                }*/
-            }
-        }
-
-        gameSeats.sort(Comparator.comparing(Seat::getSeatNumber));
-
-/*        if (playersBroadcastCallback != null) {//TODO can't get why i need it, as for me it's pointless
-            playersBroadcastCallback.playersBroadcast();
-        } else logger.error("playersBroadcastCallback is null");*/
+        gameSeats = getCalculatedGameSeats();
 
         return gameSeats;
     }
+    /*    @JsonIgnore
+        public List<Seat> getAndSetGameSeats() {
+            gameSeats = new CopyOnWriteArrayList<>();
+            for (Seat seat : seats) {
+                if (seat.getCurrentBet().compareTo(BigDecimal.ZERO) > 0) {
+                    gameSeats.add(seat);//TODO mb change it to GameSeatsCollection
+                }
+            }
+            gameSeats.sort(Comparator.comparing(Seat::getSeatNumber));
+
+            return gameSeats;
+        }*/
+
 
     @JsonIgnore
     public boolean isThereSeatWithBetForPlayer(UUID playerUUID) {

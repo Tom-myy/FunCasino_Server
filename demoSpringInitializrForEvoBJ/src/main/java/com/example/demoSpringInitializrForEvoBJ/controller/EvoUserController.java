@@ -1,9 +1,9 @@
 /*
 package com.example.demoSpringInitializrForEvoBJ.controller;
 
-import com.example.demoSpringInitializrForEvoBJ.entity.EvoUser;
-import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
-import com.example.demoSpringInitializrForEvoBJ.service.EvoUserService;
+import com.example.demoSpringInitializrForEvoBJ.player.model.EvoUser;
+import com.example.demoSpringInitializrForEvoBJ.player.repository.EvoUserRepository;
+import com.example.demoSpringInitializrForEvoBJ.player.service.EvoUserService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;

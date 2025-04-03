@@ -1,9 +1,9 @@
 /*
 package com.example.demoSpringInitializrForEvoBJ.controller;
 
-import com.example.demoSpringInitializrForEvoBJ.DTO.EvoUserDTO;
-import com.example.demoSpringInitializrForEvoBJ.entity.EvoUser;
-import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
+import com.example.demoSpringInitializrForEvoBJ.player.dto.EvoUserDTO;
+import com.example.demoSpringInitializrForEvoBJ.player.model.EvoUser;
+import com.example.demoSpringInitializrForEvoBJ.player.repository.EvoUserRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;

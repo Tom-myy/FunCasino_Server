@@ -1,8 +1,8 @@
 /*
 package com.example.demoSpringInitializrForEvoBJ.controller;
 
-import com.example.demoSpringInitializrForEvoBJ.entity.EvoUser;
-import com.example.demoSpringInitializrForEvoBJ.repository.EvoUserRepository;
+import com.example.demoSpringInitializrForEvoBJ.player.model.EvoUser;
+import com.example.demoSpringInitializrForEvoBJ.player.repository.EvoUserRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 

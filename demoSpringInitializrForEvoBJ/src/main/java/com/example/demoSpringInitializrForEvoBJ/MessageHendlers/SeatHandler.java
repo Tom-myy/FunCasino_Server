@@ -72,8 +72,8 @@ public class SeatHandler {
 
         try {
             Player player = playerService.removeSeatAndRefund(seatForLeaving);
-            messageSender.sendToClient(seatForLeaving.getPlayerUUID(), new MyPackage<>(player, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
             tableService.removeSeat(seatForLeaving);
+            messageSender.sendToClient(seatForLeaving.getPlayerUUID(), new MyPackage<>(player, EMessageType.CURRENT_DATA_ABOUT_PLAYER));
         } catch (GameSystemException e) {
             exceptionProcessor.process(e, webSocketClientHolder.findAuthUUIDBySession(session));
             return;

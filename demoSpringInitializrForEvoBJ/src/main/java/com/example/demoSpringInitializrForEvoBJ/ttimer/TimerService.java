@@ -55,10 +55,12 @@ public class TimerService {
     }
 
     public void stop(TimerType type) {
-        MyTimer timer = timers.remove(type);
+/*        MyTimer timer = timers.remove(type);
         if (timer != null) {
             timer.stopTimer();
-        }
+        }*/
+        timers.remove(type);
+        timers.clear();
     }
 
     public void stopAll() {

@@ -68,8 +68,9 @@ public class GameService {
         if (!timerService.isRunning(TimerType.BETTING_TIME)) {
             if (tableService.isTableReadyToStartGame()) {
                 bettingTimeObserver.setOnTimeout(() -> {
-                    if (tableService.isTableReadyToStartGame()) {
-                        startGame();
+                    if (tableService.isTableReadyToStartGame() && !game.isGameRunning()) {
+//                        startGame();
+                        startGameAsync();
                     }
                 });
                 timerService.start(TimerType.BETTING_TIME, 10, bettingTimeObserver);
@@ -136,8 +137,11 @@ public class GameService {
     private void startGameAsync() {
         executor.submit(() -> {
             try {
+                System.err.println("startGameAsync - before game");
                 List<Player> result = game.startGame();
+                System.err.println("startGameAsync - after game and before 'handleAfterGame'");
                 handleAfterGame(result);
+                System.err.println("startGameAsync - after 'handleAfterGame'");
             } catch (Exception e) {
                 logger.error("Game failed", e);
             }

@@ -18,6 +18,7 @@ public class Table {
     private static final Logger logger = LoggerFactory.getLogger(Table.class);
 
     @JsonIgnore
+    @Getter
     private List<Player> players = new LinkedList<>();//for money management
 
     //Common fields:
@@ -82,7 +83,19 @@ public class Table {
 
     @JsonIgnore
     public void removeSeat(Seat seat) {
-        seats.remove(seat);
+        Integer index = null;
+        for (Seat s : seats) {
+            if(s.getSeatNumber() == seat.getSeatNumber()) {
+                index = seats.indexOf(s);
+                break;
+            }
+        }
+
+        if(index != null) {
+            seats.remove(index.intValue());
+        } else {
+            logger.error("Seat doesn't exist in seats!");
+        }
     }
 
     @JsonIgnore

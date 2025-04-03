@@ -51,6 +51,9 @@ public class TableService {
     public List<Seat> getSeats() {
         return table.getSeats();
     }
+    public List<Player> getPlayers() {
+        return table.getPlayers();
+    }
 
     public void removeSeat(Seat seat) throws GameSystemException {
         if (!isSeatBusy(seat)) {
@@ -63,21 +66,7 @@ public class TableService {
         return getTable().isSeatBusy(seat.getSeatNumber());
     }
 
-/*    public void sendPhaseUpdateToPlayer(Seat seat) {
-        if (getTable().isThereSeatWithBetForPlayer(seat.getPlayerUUID())) {
-            messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-        } else
-            messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-    }*/
-
     public void sendPhaseUpdateToPlayer(Seat seat) {
-/*
-        if (getTable().isThereSeatWithBetForPlayer(seat.getPlayerUUID())) {
-            messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-        } else
-            messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.PLACING_BETS, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
-*/
-
         if (getTable().isThereSeatWithBetForPlayer(seat.getPlayerUUID())) {//TODO think over it - it doesnt work properly
             messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.READY_TO_GAME, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
         } else if (getTable().isThereSeatForPlayer(seat.getPlayerUUID())) {
@@ -86,21 +75,7 @@ public class TableService {
             messageSender.sendToClient(seat.getPlayerUUID(), new MyPackage<>(EGamePhaseForInterface.EMPTY_TABLE, EMessageType.E_GAME_STATUS_FOR_INTERFACE));
     }
 
-    /*    public void changeBetOfSeatAtTheTable(Seat seatForBetUpdating) throws GameSystemException {
-            boolean wasChanged = false;
-            for (Seat seat : getTable().getSeats()) {
-                if (seat.equalsExcludingCurrentBet(seatForBetUpdating)) {
-                    getTable().getSeats().set(getTable().getSeats().indexOf(seat), seatForBetUpdating);
-                    wasChanged = true;
-                    break;
-                }
-            }
 
-            if (!wasChanged) {
-                logger.error("Seat wasn't changed");
-                throw new GameSystemException();
-            }
-        }*/
     public void replaceSeatAndUpdateBetAtTheTable(Seat seatForBetUpdating) throws GameSystemException {
         List<Seat> seats = getTable().getSeats();
 
@@ -120,5 +95,9 @@ public class TableService {
 
     public List<Player> getPlayersWhoAreInGame() {
         return null;
+    }
+
+    public void addPlayerNickName(Player player) {
+        table.addPlayerNickName(player);
     }
 }

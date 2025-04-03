@@ -192,6 +192,8 @@ public class AuthHandler {
 
         client.setReadyToGetMessages(true);
 
+        tableService.addPlayerNickName(playerRegistry.findPlayerByUUID(client.getPlayerUUID()));
+
         messageSender.broadcast(new MyPackage<>(getAuthenticatedClients().size(), EMessageType.CLIENT_COUNT));
         messageSender.broadcast(new MyPackage<>(tableService.getTable(), EMessageType.TABLE_STATUS));
     }

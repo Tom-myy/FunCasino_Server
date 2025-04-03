@@ -73,7 +73,7 @@ public class GameHandler {
             return;
         }
 
-        if (tableService.isTableReadyToStartGame()) {
+        if (!tableService.isTableReadyToStartGame()) {
             //mb send message kinda "There is no game seat"
             messageSender.sendToClient(session, new MyPackage<>(
                     "THERE IS NO READY SEATS AT THE TABLE FOR GAME",

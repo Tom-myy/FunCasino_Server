@@ -22,13 +22,13 @@ import java.util.*;
 @Component
 public class WebSocketMessageHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketMessageHandler.class);
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final WebSocketClientHolder webSocketClientHolder;
     private final MessageDispatcher messageDispatcher;
     private final PlayerRegistry playerRegistry;
     private final MessageSender messageSender;
     private final GameService gameService;
     private final TableService tableService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public WebSocketMessageHandler(WebSocketClientHolder webSocketClientHolder, MessageDispatcher messageDispatcher, PlayerRegistry playerRegistry, MessageSender messageSender, GameService gameService, TableService tableService) {
         this.webSocketClientHolder = webSocketClientHolder;
@@ -46,63 +46,16 @@ public class WebSocketMessageHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        String payload = message.getPayload();
-        MyPackage<?> myPackage;
-        try {
-            myPackage = objectMapper.readValue(payload, new TypeReference<MyPackage<?>>() {
-            });
-        } catch (JsonProcessingException e) {
-            logger.error("Server got a unknown PACKAGE type!", e);
-            return;
-        }
+        MyPackage<?> myPackage = parseMessage(message);
+        if (myPackage == null) return;
 
-        String tempClientUUID = webSocketClientHolder.findTempUUIDBySession(session);
-        UUID authClientUUID = webSocketClientHolder.findAuthUUIDBySession(session);
+        Client client = resolveClient(session, myPackage);
+        if (client == null) return;
 
-        if (tempClientUUID == null && authClientUUID == null) {
-            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
-            return;
-        }
-
-        Client tempClient = null;
-        Client authClient = null;
-
-        if (tempClientUUID != null)
-            tempClient = webSocketClientHolder.findTempClientByUUID(tempClientUUID);
-
-        if (authClientUUID != null)
-            authClient = webSocketClientHolder.findAuthClientByUUID(authClientUUID);
-
-        if (tempClient == null & authClient == null) {
-            logger.error("Server got a client with unknown UUID, msg type - " + myPackage.getMessageType());
-            return;
-        }
-
-        if (authClient != null) {
-            UUID clientUUID = webSocketClientHolder.findAuthUUIDBySession(session);
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client with UUID (" + clientUUID + ")");
-        } else if (tempClient != null) {
-            logger.info("Received (" + myPackage.getMessageType() + ") message from client (" + session.getId() + " - session ID (not UUID))");
-        } else {
-            logger.error("Oh piece of shit, smth went wrong!");
-            return;
-        }
-
-
-
+        logClientMessage(client, session, myPackage);
 
         messageDispatcher.dispatch(myPackage, session);
     }
-
-    private int clientCount() {
-        int count = 0;
-        for (Client c : webSocketClientHolder.getAuthenticatedClients().values()) {
-            if (c.getConnectionStatus() == ConnectionStatus.CONNECTED) ++count;
-        }
-        return count;
-    }
-
-
 
     @Override
     public void afterConnectionClosed(WebSocketSession client, CloseStatus status) {
@@ -112,9 +65,11 @@ public class WebSocketMessageHandler extends TextWebSocketHandler {
     }
 
     public void removingInactiveClient(WebSocketSession session) {
-        if (webSocketClientHolder.getAuthenticatedClients().containsValue(webSocketClientHolder.findAuthClientBySession(session))) {
-            Client client = webSocketClientHolder.findAuthClientBySession(session);
+        Client client = webSocketClientHolder.findAuthClientBySession(session);
+
+        if (webSocketClientHolder.getAuthenticatedClients().containsValue(client)) {
             client.setConnectionStatusToDisconnect();
+
             while (gameService.isGameRunning()) {
 
             }
@@ -122,18 +77,66 @@ public class WebSocketMessageHandler extends TextWebSocketHandler {
             if (client.getConnectionStatus() == ConnectionStatus.CONNECTED) {
                 return;
             }
+
             UUID clientUUID = webSocketClientHolder.findAuthUUIDBySession(session);
 
-            tableService.getTable().removePlayersSeatsAtTheTable(playerRegistry.findPlayerByUUID(clientUUID));
-            webSocketClientHolder.getAuthenticatedClients().remove(webSocketClientHolder.findAuthUUIDBySession(session));
+            tableService.removePlayersSeatsAtTheTable(playerRegistry.findPlayerByUUID(clientUUID));
+            webSocketClientHolder.getAuthenticatedClients().remove(clientUUID);
             playerRegistry.getPlayers().remove(playerRegistry.findPlayerByUUID(clientUUID));
             //сделать некий метод, который после отключения клиента будет проверять списки клиентов,
             //игроков и мест, и будет удалять отключившигося клиента оттуда
 
-            logger.info("Client disconnected: " + clientUUID);
+            logger.info("Client disconnected: {}", clientUUID);
 
             messageSender.broadcast(new MyPackage<>(clientCount(), EMessageType.CLIENT_COUNT));
             messageSender.broadcast(new MyPackage<>(tableService.getTable(), EMessageType.TABLE_STATUS));
         }
+    }
+
+    private MyPackage<?> parseMessage(TextMessage message) {
+        String payload = message.getPayload();
+        try {
+            return objectMapper.readValue(payload, new TypeReference<>() {
+            });
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to parse client message", e);
+            return null;
+        }
+    }
+
+    private Client resolveClient(WebSocketSession session, MyPackage<?> myPackage) {
+        String tempUUID = webSocketClientHolder.findTempUUIDBySession(session);
+        UUID authUUID = webSocketClientHolder.findAuthUUIDBySession(session);
+
+        if (tempUUID == null && authUUID == null) {
+            logger.error("Client UUID unknown, message type: {}", myPackage.getMessageType());
+            return null;
+        }
+
+        Client client = (authUUID != null)
+                ? webSocketClientHolder.findAuthClientByUUID(authUUID)
+                : webSocketClientHolder.findTempClientByUUID(tempUUID);
+
+        if (client == null) {
+            logger.error("Client not found by UUID, message type: {}", myPackage.getMessageType());
+        }
+
+        return client;
+    }
+
+    private void logClientMessage(Client client, WebSocketSession session, MyPackage<?> myPackage) {
+        if (client.getPlayerUUID() != null) {
+            logger.info("Received ({}) from AUTH client UUID ({})", myPackage.getMessageType(), client.getPlayerUUID());
+        } else {
+            logger.info("Received ({}) from TEMP client session ID ({})", myPackage.getMessageType(), session.getId());
+        }
+    }
+
+    private int clientCount() {
+        int count = 0;
+        for (Client c : webSocketClientHolder.getAuthenticatedClients().values()) {
+            if (c.getConnectionStatus() == ConnectionStatus.CONNECTED) ++count;
+        }
+        return count;
     }
 }

@@ -27,6 +27,12 @@ public class WebSocketClientHolder {
         temporaryClients.put(sessionId, client);
     }
 
+    public void addAuthenticatedClient(Client client, UUID uuid) {
+        temporaryClients.remove(client.getSession().getId());
+        client.setPlayerUUID(uuid);
+        authenticatedClients.put(uuid, client);
+    }
+
     public UUID findAuthUUIDBySession(WebSocketSession session) {
         for (Map.Entry<UUID, Client> entry: authenticatedClients.entrySet()){
             if (entry.getValue().getSession().equals(session)){
@@ -71,6 +77,16 @@ public class WebSocketClientHolder {
             }
         }
         return null;
+    }
+
+    public void reconnectClient(Client client, UUID playerUUID) {
+        client.setPlayerUUID(playerUUID);
+        client.setConnectionStatusToConnect();
+
+        temporaryClients.remove(client.getSession().getId());
+
+        authenticatedClients.put(playerUUID, client);
+
     }
 
 //    public String findNotReadyUUIDBySession(WebSocketSession session) {

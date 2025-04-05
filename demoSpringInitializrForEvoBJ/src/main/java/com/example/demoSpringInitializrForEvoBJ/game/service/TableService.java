@@ -103,4 +103,8 @@ public class TableService {
     public void addPlayerNickName(Player player) {
         table.addPlayerNickName(player);
     }
+
+    public void removePlayersSeatsAtTheTable(Player player) {
+        table.removePlayersSeatsAtTheTable(player);
+    }
 }

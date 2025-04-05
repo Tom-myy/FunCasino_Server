@@ -42,7 +42,6 @@ public class SeatHandler {
         this.webSocketClientHolder = webSocketClientHolder;
     }
 
-    /// copy past part, but it's like shortcut
     public Table getTable() {
         return tableService.getTable();
     }
